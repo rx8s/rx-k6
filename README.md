@@ -24,17 +24,30 @@
 
 ## 🌐 Web App (แนะนำ)
 
-เปิดหน้าเว็บสำหรับตั้งค่า + สั่งรันทดสอบ (ดูผลสด) และแดชบอร์ดรายงานแยกหน้า:
+เปิดหน้าเว็บสำหรับตั้งค่า + สั่งรันทดสอบ (ดูผลสด) และแดชบอร์ดรายงานแยกหน้า
 
+**เวอร์ชัน Python** (ค่าเริ่มต้น — ใช้ stdlib ล้วน ไม่ต้อง pip install):
 ```bash
-npm run web
+python3 server.py        # หรือ  ./run.sh
 ```
-แล้วเปิด **http://127.0.0.1:4000**
+**เวอร์ชัน Node** (ทางเลือก ยังเก็บไว้ ใช้ได้เหมือนกัน):
+```bash
+npm run web              # node server.js
+```
+
+ทั้งสองเปิดที่ **http://127.0.0.1:4000** หน้าเว็บ (`web/`) และ API ชุดเดียวกัน
 - หน้า **ควบคุม** (`/`) — ตั้ง BASE_URL, เลือกชุดทดสอบ, ติ๊กยืนยันสิทธิ์, กดรัน แล้วดู log สดๆ
 - หน้า **แดชบอร์ด** (`/dashboard`) — KPI รวม, การ์ดรายด้าน (เขียว/เหลือง/แดง), กราฟ latency & error, ตารางละเอียด, ปุ่มพิมพ์เป็น PDF
 
 > เซิร์ฟเวอร์ผูกกับ `127.0.0.1` เท่านั้น (เครื่องตัวเอง) และ UI บังคับติ๊กยืนยันสิทธิ์ก่อนรันทุกครั้ง
-> เปลี่ยนพอร์ตได้: `PORT=5000 npm run web`
+> เปลี่ยนพอร์ตได้: `PORT=5000 python3 server.py`
+> ชุดทดสอบยังรันด้วย **k6** เหมือนเดิม — server แค่สั่งรัน + สตรีมผล + สรุป
+
+### สร้างรายงาน static (ไม่ต้องเปิด server)
+```bash
+python3 scripts/make_report.py     # หรือ  node scripts/make-report.js
+open reports/executive-report.html
+```
 
 ---
 
@@ -79,19 +92,22 @@ BASE_URL=... AUTH_TOKEN=<token> npm run load
 
 ## โครงสร้าง
 ```
-server.js               web app (API + ตัวรัน k6 + สตรีมผลสด) — ไม่มี dependency
+server.py               web app (Python stdlib) — API + ตัวรัน k6 + สตรีมผลสด ★ ค่าเริ่มต้น
+run.sh                  เปิด server.py อย่างสะดวก
+server.js               web app (Node) — เวอร์ชันเดิม ยังใช้ได้ (npm run web)
 web/                    หน้าเว็บ: index.html (ควบคุม), dashboard.html, *.js, styles.css
 config/config.js        ค่ากลาง: BASE_URL, thresholds, profiles, endpoints
-lib/helpers.js          ฟังก์ชันร่วม + metric ที่กำหนดเอง
-lib/payloads.js         payload ความปลอดภัย + ค่าสำหรับ fuzz
-lib/summary.js          บันทึกผลลง reports/ (ใช้ร่วมทุก test)
+lib/helpers.js          ฟังก์ชันร่วม + metric ที่กำหนดเอง (k6)
+lib/payloads.js         payload ความปลอดภัย + ค่าสำหรับ fuzz (k6)
+lib/summary.js          บันทึกผลลง reports/ (ใช้ร่วมทุก test) (k6)
 scenarios/endpoints.json นิยาม endpoint + field ที่จะทดสอบ inject
-tests/*.js              ชุดทดสอบทั้ง 7
-scripts/report-core.js  logic อ่าน/สรุปผล (ใช้ร่วม make-report + server)
+tests/*.js              ชุดทดสอบทั้ง 7 (k6 — JavaScript)
+scripts/report_core.py  logic อ่าน/สรุปผล (Python) ★   | report-core.js = เวอร์ชัน Node
+scripts/make_report.py  รวมผล → executive-report.html (Python) ★ | make-report.js = Node
 scripts/run-all.sh      รันครบทุกชุด (มีขั้นยืนยันสิทธิ์)
-scripts/make-report.js  รวมผล → reports/executive-report.html (static)
 reports/                ผลลัพธ์ (JSON + HTML)
 ```
+★ = ค่าเริ่มต้น (Python) · ไฟล์ `*.js` ฝั่งเครื่องมือเป็นเวอร์ชัน Node เดิมที่เก็บไว้
 
 ## หมายเหตุด้านความปลอดภัย
 ชุด `security.js` ใช้ payload ตรวจจับมาตรฐาน (OWASP) รันด้วย 1 VU แบบสุภาพ
