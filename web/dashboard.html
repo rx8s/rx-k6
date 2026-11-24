@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>rx_k6 — แดชบอร์ดรายงาน</title>
+<link rel="stylesheet" href="/web/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">🎯 rx_k6 <span style="color:#64748b;font-weight:400">· แดชบอร์ดรายงาน</span></div>
+  <nav>
+    <a href="/">ควบคุม</a>
+    <a href="/dashboard" class="active">แดชบอร์ด</a>
+  </nav>
+</div>
+
+<div class="wrap">
+  <div class="row" style="margin-bottom:8px">
+    <h1 style="margin:0">แดชบอร์ดผลทดสอบ</h1>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="refreshBtn">↻ รีเฟรช</button>
+    <button class="btn ghost" onclick="window.print()">🖨 พิมพ์/บันทึก PDF</button>
+  </div>
+  <p class="sub" id="meta">กำลังโหลด…</p>
+
+  <div id="content"></div>
+</div>
+
+<script src="/web/dashboard.js"></script>
+</body>
+</html>

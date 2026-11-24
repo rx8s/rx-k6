@@ -12,6 +12,7 @@
     "security": "k6 run -e TEST_TYPE=security tests/security.js",
     "fuzz": "k6 run -e TEST_TYPE=fuzz tests/fuzz.js",
     "report": "node scripts/make-report.js",
-    "all": "bash scripts/run-all.sh"
+    "all": "bash scripts/run-all.sh",
+    "web": "node server.js"
   }
 }

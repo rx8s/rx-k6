@@ -1,145 +1,43 @@
 #!/usr/bin/env node
 // ============================================================================
-// make-report.js — รวมผล k6 ทุกชุดใน reports/*.json เป็นรายงาน HTML สำหรับผู้บริหาร
-//   ใช้งาน:  node scripts/make-report.js
-//   ผลลัพธ์: reports/executive-report.html
+// make-report.js — สร้างรายงาน HTML ผู้บริหาร (static) จากผลล่าสุดใน reports/
+//   ใช้งาน:  node scripts/make-report.js   →   reports/executive-report.html
+//   หมายเหตุ: ต้องการ dashboard แบบ interactive ให้ใช้ `npm run web` แทน
 // ============================================================================
 const fs = require('fs');
 const path = require('path');
+const { aggregate } = require('./report-core.js');
 
-const REPORTS_DIR = path.join(__dirname, '..', 'reports');
-const OUT = path.join(REPORTS_DIR, 'executive-report.html');
+const OUT = path.join(__dirname, '..', 'reports', 'executive-report.html');
+const n = (v) => (v == null ? '—' : v);
 
-function loadLatestPerType() {
-  if (!fs.existsSync(REPORTS_DIR)) return {};
-  const files = fs.readdirSync(REPORTS_DIR)
-    .filter((f) => f.endsWith('.json') && f !== 'latest.json' && f !== 'executive-report.json');
+function render(agg) {
+  const badge = { green: 'ผ่าน', yellow: 'เฝ้าระวัง', red: 'ต้องแก้' };
+  const cards = agg.tests.map((t) => `
+      <div class="card ${t.color}">
+        <div class="card-h">${t.label}</div>
+        <div class="badge ${t.color}">${badge[t.color]}</div>
+        <div class="card-msg">${t.verdict}</div>
+      </div>`).join('');
 
-  const byType = {};
-  for (const f of files) {
-    const type = f.split(/-\d{4}-\d{2}-\d{2}/)[0]; // ตัดชื่อก่อนวันที่
-    const full = path.join(REPORTS_DIR, f);
-    const mtime = fs.statSync(full).mtimeMs;
-    if (!byType[type] || mtime > byType[type].mtime) {
-      byType[type] = { mtime, file: full, name: f };
-    }
-  }
-  const result = {};
-  for (const [type, info] of Object.entries(byType)) {
-    try {
-      result[type] = { ...info, data: JSON.parse(fs.readFileSync(info.file, 'utf8')) };
-    } catch (e) {
-      console.warn(`อ่านไฟล์ไม่ได้: ${info.name} — ${e.message}`);
-    }
-  }
-  return result;
-}
-
-const num = (v, d = 2) => (typeof v === 'number' && isFinite(v) ? v.toFixed(d) : '—');
-
-function metrics(data) {
-  const m = (data && data.metrics) || {};
-  const dur = (m.http_req_duration && m.http_req_duration.values) || {};
-  const failed = (m.http_req_failed && m.http_req_failed.values) || {};
-  const reqs = (m.http_reqs && m.http_reqs.values) || {};
-  const vus = (m.vus_max && m.vus_max.values) || {};
-  const checks = (m.checks && m.checks.values) || {};
-  const sec = (m.security_findings && m.security_findings.values) || {};
-  const biz = (m.business_errors && m.business_errors.values) || {};
-
-  // threshold ผ่านหมดไหม
-  let thrOk = true, thrTotal = 0;
-  for (const met of Object.values(m)) {
-    if (met && met.thresholds) {
-      for (const t of Object.values(met.thresholds)) {
-        thrTotal++;
-        if (t && t.ok === false) thrOk = false;
-      }
-    }
-  }
-
-  return {
-    totalReqs: reqs.count || 0,
-    rps: reqs.rate || 0,
-    avg: dur.avg, p95: dur['p(95)'], p99: dur['p(99)'], max: dur.max,
-    failRate: (failed.rate || 0) * 100,
-    maxVus: vus.max || vus.value || 0,
-    checkRate: (checks.rate != null ? checks.rate : 1) * 100,
-    checkPass: checks.passes || 0, checkFail: checks.fails || 0,
-    securityFindings: sec.count || 0,
-    bizErrors: biz.count || 0,
-    thrOk, thrTotal,
-  };
-}
-
-// ตัดสิน verdict ต่อชุดทดสอบ (เขียว/เหลือง/แดง)
-function verdict(type, mx) {
-  if (type === 'security') {
-    if (mx.securityFindings > 0) return ['red', `พบจุดน่าสงสัย ${mx.securityFindings} จุด`];
-    return ['green', 'ไม่พบช่องโหว่จาก payload มาตรฐาน'];
-  }
-  if (type === 'fuzz') {
-    if (mx.bizErrors > 0) return ['yellow', `จัดการ input แปลกไม่ดี ${mx.bizErrors} ครั้ง (ตอบ 5xx/ล่ม)`];
-    return ['green', 'รับมือ input ผิดรูปแบบได้ดี (ไม่ crash)'];
-  }
-  // ชุดโหลด
-  if (mx.failRate >= 5) return ['red', `error rate สูง ${num(mx.failRate)}%`];
-  if (!mx.thrOk || mx.failRate >= 1) return ['yellow', `ใกล้เกิน SLA (error ${num(mx.failRate)}%, p95 ${num(mx.p95,0)}ms)`];
-  return ['green', `ผ่าน SLA (error ${num(mx.failRate)}%, p95 ${num(mx.p95,0)}ms)`];
-}
-
-const TYPE_LABEL = {
-  smoke: 'Smoke (เช็กเบื้องต้น)',
-  load: 'Load (โหลดปกติ)',
-  stress: 'Stress (หาจุดพัง)',
-  spike: 'Spike (traffic พุ่ง)',
-  soak: 'Soak (รันยาว)',
-  security: 'Security (OWASP)',
-  fuzz: 'API Fuzzing',
-};
-
-function render(all) {
-  const types = Object.keys(all);
-  const rows = [];
-  const cards = [];
-  let worst = 'green';
-  const rank = { green: 0, yellow: 1, red: 2 };
-
-  // ดึง target จาก latest.json ถ้ามี
-  let baseUrl = '—';
-  const latest = path.join(REPORTS_DIR, 'latest.json');
-  if (fs.existsSync(latest)) {
-    try { baseUrl = JSON.parse(fs.readFileSync(latest, 'utf8')).baseUrl || '—'; } catch (e) {}
-  }
-
-  for (const type of types) {
-    const mx = metrics(all[type].data);
-    const [color, msg] = verdict(type, mx);
-    if (rank[color] > rank[worst]) worst = color;
-    const label = TYPE_LABEL[type] || type;
-
-    cards.push(`
-      <div class="card ${color}">
-        <div class="card-h">${label}</div>
-        <div class="badge ${color}">${{green:'ผ่าน',yellow:'เฝ้าระวัง',red:'ต้องแก้'}[color]}</div>
-        <div class="card-msg">${msg}</div>
-      </div>`);
-
-    rows.push(`
+  const rows = agg.tests.map((t) => {
+    const m = t.metrics;
+    const last = t.type === 'security' ? m.securityFindings
+      : t.type === 'fuzz' ? m.bizErrors
+      : (m.checkRate != null ? m.checkRate + '%' : '—');
+    return `
       <tr>
-        <td><b>${label}</b></td>
-        <td class="dot ${color}"></td>
-        <td>${mx.totalReqs.toLocaleString()}</td>
-        <td>${num(mx.rps,1)}</td>
-        <td>${num(mx.p95,0)}</td>
-        <td>${num(mx.p99,0)}</td>
-        <td>${num(mx.failRate)}%</td>
-        <td>${mx.maxVus}</td>
-        <td>${type==='security'?mx.securityFindings:(type==='fuzz'?mx.bizErrors:num(mx.checkRate,1)+'%')}</td>
-      </tr>`);
-  }
-
-  const overall = { green: 'ระบบอยู่ในเกณฑ์ดี', yellow: 'มีจุดควรเฝ้าระวัง', red: 'มีประเด็นที่ต้องแก้ไข' }[worst];
+        <td><b>${t.label}</b></td>
+        <td class="dot ${t.color}"></td>
+        <td>${m.totalReqs.toLocaleString()}</td>
+        <td>${n(m.rps)}</td>
+        <td>${n(m.p95)}</td>
+        <td>${n(m.p99)}</td>
+        <td>${n(m.failRate)}%</td>
+        <td>${m.maxVus}</td>
+        <td>${last}</td>
+      </tr>`;
+  }).join('');
 
   return `<!doctype html>
 <html lang="th"><head><meta charset="utf-8">
@@ -177,23 +75,19 @@ function render(all) {
 <body><div class="wrap">
   <header>
     <h1>รายงานผลทดสอบความทนทานและความปลอดภัยของระบบ</h1>
-    <div class="meta">เป้าหมาย: <b>${baseUrl}</b> &nbsp;·&nbsp; วันที่: ${new Date().toLocaleString('th-TH')} &nbsp;·&nbsp; เครื่องมือ: k6</div>
+    <div class="meta">เป้าหมาย: <b>${agg.baseUrl}</b> &nbsp;·&nbsp; วันที่: ${new Date().toLocaleString('th-TH')} &nbsp;·&nbsp; เครื่องมือ: k6</div>
   </header>
-
-  <div class="verdict ${worst}"><span class="light ${worst}"></span><span>ผลโดยรวม: ${overall}</span></div>
-
+  <div class="verdict ${agg.worst}"><span class="light ${agg.worst}"></span><span>ผลโดยรวม: ${agg.overall}</span></div>
   <h2>สรุปรายด้าน</h2>
-  <div class="cards">${cards.join('')}</div>
-
+  <div class="cards">${cards}</div>
   <h2>ตารางตัวชี้วัด</h2>
   <table>
     <thead><tr>
       <th>ชุดทดสอบ</th><th>สถานะ</th><th>Requests</th><th>req/s</th>
       <th>p95 (ms)</th><th>p99 (ms)</th><th>Error</th><th>Peak VUs</th><th>Checks/พบ</th>
     </tr></thead>
-    <tbody>${rows.join('')}</tbody>
+    <tbody>${rows}</tbody>
   </table>
-
   <h2>อ่านค่าอย่างไร</h2>
   <p class="gloss">
     <b>p95/p99</b> = เวลาตอบสนองที่ 95% / 99% ของ request เร็วกว่าค่านี้ (ยิ่งต่ำยิ่งดี) ·
@@ -201,24 +95,22 @@ function render(all) {
     <b>Peak VUs</b> = จำนวนผู้ใช้จำลองสูงสุดพร้อมกัน ·
     <b>Checks</b> = สัดส่วนการตรวจที่ผ่าน; ด้าน Security/Fuzz แสดง "จำนวนจุดที่พบ"
   </p>
-
   <div class="note">
-    รายงานนี้สร้างอัตโนมัติจากผลการทดสอบด้วย k6 บนระบบที่ได้รับอนุญาต
-    เพื่อประเมินสมรรถนะและความทนทานเท่านั้น · ผล Security เป็นการตรวจเบื้องต้นด้วย payload มาตรฐาน
-    ไม่ทดแทนการตรวจประเมินความปลอดภัยเชิงลึกโดยผู้เชี่ยวชาญ
+    รายงานนี้สร้างอัตโนมัติจากผลการทดสอบด้วย k6 บนระบบที่ได้รับอนุญาต เพื่อประเมินสมรรถนะและความทนทานเท่านั้น ·
+    ผล Security เป็นการตรวจเบื้องต้นด้วย payload มาตรฐาน ไม่ทดแทนการตรวจประเมินความปลอดภัยเชิงลึกโดยผู้เชี่ยวชาญ
   </div>
 </div></body></html>`;
 }
 
 function main() {
-  const all = loadLatestPerType();
-  if (Object.keys(all).length === 0) {
+  const agg = aggregate();
+  if (agg.tests.length === 0) {
     console.error('ยังไม่มีผลใน reports/ — รันชุดทดสอบก่อน เช่น: npm run smoke');
     process.exit(1);
   }
-  fs.writeFileSync(OUT, render(all), 'utf8');
+  fs.writeFileSync(OUT, render(agg), 'utf8');
   console.log(`✅ สร้างรายงานผู้บริหารแล้ว: ${OUT}`);
-  console.log(`   ชุดทดสอบที่รวม: ${Object.keys(all).join(', ')}`);
+  console.log(`   ชุดทดสอบที่รวม: ${agg.tests.map((t) => t.type).join(', ')}`);
 }
 
 main();

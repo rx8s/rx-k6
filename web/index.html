@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>rx_k6 — ควบคุมการทดสอบ</title>
+<link rel="stylesheet" href="/web/styles.css">
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">🎯 rx_k6 <span style="color:#64748b;font-weight:400">· ระบบจำลองการโจมตี/ทดสอบ</span></div>
+  <nav>
+    <a href="/" class="active">ควบคุม</a>
+    <a href="/dashboard">แดชบอร์ด</a>
+  </nav>
+</div>
+
+<div class="wrap">
+  <div class="banner">
+    ⚠️ ใช้ทดสอบเฉพาะระบบที่คุณเป็นเจ้าของหรือได้รับอนุญาตเป็นลายลักษณ์อักษรเท่านั้น · เซิร์ฟเวอร์นี้เปิดที่ localhost เท่านั้น
+  </div>
+
+  <h1>ควบคุมการทดสอบ</h1>
+  <p class="sub">ตั้งค่าเป้าหมาย เลือกชุดทดสอบ แล้วสั่งรัน — ดูผลสดด้านขวา และสรุปภาพรวมที่หน้าแดชบอร์ด</p>
+
+  <div class="grid2">
+    <!-- ฟอร์มตั้งค่า -->
+    <div class="panel">
+      <h2>ตั้งค่า</h2>
+
+      <label for="baseUrl">เป้าหมาย (BASE_URL)</label>
+      <input type="url" id="baseUrl" placeholder="https://staging.example.com">
+      <small class="hint">ดีฟอลต์ดึงจาก config/config.js</small>
+
+      <label for="authToken">Auth Token (ถ้ามี, ไม่บังคับ)</label>
+      <input type="text" id="authToken" placeholder="Bearer token สำหรับ API ที่ต้องล็อกอิน" autocomplete="off">
+
+      <label>ชุดทดสอบ</label>
+      <div class="tests" id="tests"></div>
+
+      <div id="soakWrap" style="display:none">
+        <label for="soakDuration">ระยะเวลา Soak</label>
+        <input type="text" id="soakDuration" value="10m" placeholder="เช่น 10m, 1h">
+      </div>
+
+      <label class="checkbox">
+        <input type="checkbox" id="authorized">
+        <span>ข้าพเจ้ายืนยันว่าเป็นเจ้าของหรือได้รับอนุญาตให้ทดสอบเป้าหมายนี้</span>
+      </label>
+
+      <div class="row">
+        <button class="btn" id="runBtn" disabled>▶ เริ่มทดสอบ</button>
+        <a class="btn ghost" href="/dashboard">ดูแดชบอร์ด →</a>
+      </div>
+    </div>
+
+    <!-- คอนโซลผลสด -->
+    <div class="panel">
+      <h2>ผลการรันแบบสด</h2>
+      <div class="status" id="status"><span class="ring"></span><span id="statusText">พร้อมรัน</span></div>
+      <div class="console" id="console"><span class="dim">ผลการรันจะแสดงที่นี่…</span></div>
+    </div>
+  </div>
+</div>
+
+<script src="/web/app.js"></script>
+</body>
+</html>

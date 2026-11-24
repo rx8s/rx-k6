@@ -22,7 +22,23 @@
 
 ---
 
-## เริ่มใช้งาน
+## 🌐 Web App (แนะนำ)
+
+เปิดหน้าเว็บสำหรับตั้งค่า + สั่งรันทดสอบ (ดูผลสด) และแดชบอร์ดรายงานแยกหน้า:
+
+```bash
+npm run web
+```
+แล้วเปิด **http://127.0.0.1:4000**
+- หน้า **ควบคุม** (`/`) — ตั้ง BASE_URL, เลือกชุดทดสอบ, ติ๊กยืนยันสิทธิ์, กดรัน แล้วดู log สดๆ
+- หน้า **แดชบอร์ด** (`/dashboard`) — KPI รวม, การ์ดรายด้าน (เขียว/เหลือง/แดง), กราฟ latency & error, ตารางละเอียด, ปุ่มพิมพ์เป็น PDF
+
+> เซิร์ฟเวอร์ผูกกับ `127.0.0.1` เท่านั้น (เครื่องตัวเอง) และ UI บังคับติ๊กยืนยันสิทธิ์ก่อนรันทุกครั้ง
+> เปลี่ยนพอร์ตได้: `PORT=5000 npm run web`
+
+---
+
+## เริ่มใช้งาน (CLI)
 
 ### 1) ตั้งเป้าหมาย
 แก้ `config/config.js` → `ENDPOINTS` ให้ตรงกับ API ของระบบคุณ
@@ -63,14 +79,17 @@ BASE_URL=... AUTH_TOKEN=<token> npm run load
 
 ## โครงสร้าง
 ```
+server.js               web app (API + ตัวรัน k6 + สตรีมผลสด) — ไม่มี dependency
+web/                    หน้าเว็บ: index.html (ควบคุม), dashboard.html, *.js, styles.css
 config/config.js        ค่ากลาง: BASE_URL, thresholds, profiles, endpoints
 lib/helpers.js          ฟังก์ชันร่วม + metric ที่กำหนดเอง
 lib/payloads.js         payload ความปลอดภัย + ค่าสำหรับ fuzz
 lib/summary.js          บันทึกผลลง reports/ (ใช้ร่วมทุก test)
 scenarios/endpoints.json นิยาม endpoint + field ที่จะทดสอบ inject
 tests/*.js              ชุดทดสอบทั้ง 7
+scripts/report-core.js  logic อ่าน/สรุปผล (ใช้ร่วม make-report + server)
 scripts/run-all.sh      รันครบทุกชุด (มีขั้นยืนยันสิทธิ์)
-scripts/make-report.js  รวมผล → reports/executive-report.html
+scripts/make-report.js  รวมผล → reports/executive-report.html (static)
 reports/                ผลลัพธ์ (JSON + HTML)
 ```
 
