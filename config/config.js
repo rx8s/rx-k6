@@ -27,6 +27,9 @@ export const THRESHOLDS = {
   http_req_duration: ['p(95)<800', 'p(99)<1500'], // p95 < 800ms, p99 < 1.5s
 };
 
+// สถิติที่ส่งออกใน summary — ค่าเริ่มต้นของ k6 ไม่มี p(99) รายงาน/แดชบอร์ดจึงว่าง
+export const SUMMARY_TREND_STATS = ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'];
+
 // ความเข้มของแต่ละ profile — ปรับตามขนาดระบบจริง เริ่มต้นไว้แบบอนุรักษ์นิยม
 export const PROFILES = {
   smoke:  { vus: 1,   duration: '30s' },                 // ตรวจว่าใช้งานได้ก่อน

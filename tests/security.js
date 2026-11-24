@@ -10,7 +10,7 @@
 // ============================================================================
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { BASE_URL, DEFAULT_HEADERS } from '../config/config.js';
+import { BASE_URL, DEFAULT_HEADERS, SUMMARY_TREND_STATS } from '../config/config.js';
 import { SECURITY_SUITES, LEAK_SIGNATURES } from '../lib/payloads.js';
 import { securityHits } from '../lib/helpers.js';
 const endpointsData = JSON.parse(open('../scenarios/endpoints.json'));
@@ -20,6 +20,7 @@ export { handleSummary } from '../lib/summary.js';
 export const options = {
   vus: 1,            // สแกน ไม่ใช่โหลด — ยิงทีละรายการ
   iterations: 1,     // วนครบทุก payload รอบเดียว
+  summaryTrendStats: SUMMARY_TREND_STATS,
   tags: { test_type: 'security' },
 };
 

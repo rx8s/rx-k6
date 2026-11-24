@@ -3,7 +3,7 @@
 //   รันอันนี้ก่อนเสมอ เพื่อยืนยันว่า BASE_URL/endpoint ถูกต้อง
 // ============================================================================
 import { sleep } from 'k6';
-import { PROFILES, ENDPOINTS } from '../config/config.js';
+import { PROFILES, ENDPOINTS, SUMMARY_TREND_STATS } from '../config/config.js';
 import { callEndpoint } from '../lib/helpers.js';
 
 export { handleSummary } from '../lib/summary.js';
@@ -15,6 +15,7 @@ export const options = {
     http_req_failed: ['rate<0.01'],
     checks_passed: ['rate>0.95'],
   },
+  summaryTrendStats: SUMMARY_TREND_STATS,
   tags: { test_type: 'smoke' },
 };
 

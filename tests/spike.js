@@ -3,7 +3,7 @@
 //   ตอบคำถาม: ระบบ "รอดและฟื้นตัว" จาก spike กะทันหันได้ไหม
 // ============================================================================
 import { sleep } from 'k6';
-import { PROFILES, ENDPOINTS } from '../config/config.js';
+import { PROFILES, ENDPOINTS, SUMMARY_TREND_STATS } from '../config/config.js';
 import { callEndpoint } from '../lib/helpers.js';
 
 export { handleSummary } from '../lib/summary.js';
@@ -22,6 +22,7 @@ export const options = {
   thresholds: {
     http_req_failed: ['rate<0.05'], // ยอมให้พลาดได้ถึง 5% ช่วง spike
   },
+  summaryTrendStats: SUMMARY_TREND_STATS,
   tags: { test_type: 'spike' },
 };
 

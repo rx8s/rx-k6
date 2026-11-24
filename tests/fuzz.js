@@ -6,7 +6,7 @@
 // ============================================================================
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { BASE_URL, DEFAULT_HEADERS } from '../config/config.js';
+import { BASE_URL, DEFAULT_HEADERS, SUMMARY_TREND_STATS } from '../config/config.js';
 import { FUZZ_VALUES } from '../lib/payloads.js';
 import { bizErrors } from '../lib/helpers.js';
 const endpointsData = JSON.parse(open('../scenarios/endpoints.json'));
@@ -16,6 +16,7 @@ export { handleSummary } from '../lib/summary.js';
 export const options = {
   vus: 1,
   iterations: 1,
+  summaryTrendStats: SUMMARY_TREND_STATS,
   tags: { test_type: 'fuzz' },
 };
 

@@ -3,7 +3,7 @@
 //   ใช้ตอบผู้บริหารว่า "ระบบรับได้กี่ผู้ใช้พร้อมกันก่อนเริ่มช้า/ล่ม"
 // ============================================================================
 import { sleep } from 'k6';
-import { PROFILES, ENDPOINTS } from '../config/config.js';
+import { PROFILES, ENDPOINTS, SUMMARY_TREND_STATS } from '../config/config.js';
 import { callEndpoint } from '../lib/helpers.js';
 
 export { handleSummary } from '../lib/summary.js';
@@ -21,6 +21,7 @@ export const options = {
   thresholds: {
     http_req_duration: ['p(95)<3000'], // ใช้เป็นสัญญาณเตือน ไม่ abort
   },
+  summaryTrendStats: SUMMARY_TREND_STATS,
   tags: { test_type: 'stress' },
 };
 
