@@ -1,0 +1,32 @@
+{
+  "_comment": "นิยาม endpoint ของระบบคุณที่นี่ แล้วแก้ config/config.js ให้ import ถ้าต้องการ. injectable=true คือ field ที่จะเอา payload ความปลอดภัยไปยัด",
+  "endpoints": [
+    {
+      "name": "search",
+      "method": "GET",
+      "path": "/api/search",
+      "query": { "q": "{INJECT}" },
+      "injectable": ["q"]
+    },
+    {
+      "name": "login",
+      "method": "POST",
+      "path": "/api/login",
+      "body": { "username": "{INJECT}", "password": "{INJECT}" },
+      "injectable": ["username", "password"]
+    },
+    {
+      "name": "item_detail",
+      "method": "GET",
+      "path": "/api/items/{INJECT}",
+      "injectable": ["path"]
+    },
+    {
+      "name": "create_item",
+      "method": "POST",
+      "path": "/api/items",
+      "body": { "name": "{INJECT}", "description": "{INJECT}" },
+      "injectable": ["name", "description"]
+    }
+  ]
+}

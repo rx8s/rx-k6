@@ -1,0 +1,17 @@
+{
+  "name": "rx-k6",
+  "version": "1.0.0",
+  "description": "เฟรมเวิร์กจำลองการโจมตี/ทดสอบระบบ (Load, Stress, Spike, Soak, Security, Fuzz) ด้วย k6 พร้อมรายงานผู้บริหาร",
+  "private": true,
+  "scripts": {
+    "smoke": "k6 run -e TEST_TYPE=smoke tests/smoke.js",
+    "load": "k6 run -e TEST_TYPE=load tests/load.js",
+    "stress": "k6 run -e TEST_TYPE=stress tests/stress.js",
+    "spike": "k6 run -e TEST_TYPE=spike tests/spike.js",
+    "soak": "k6 run -e TEST_TYPE=soak tests/soak.js",
+    "security": "k6 run -e TEST_TYPE=security tests/security.js",
+    "fuzz": "k6 run -e TEST_TYPE=fuzz tests/fuzz.js",
+    "report": "node scripts/make-report.js",
+    "all": "bash scripts/run-all.sh"
+  }
+}
