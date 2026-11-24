@@ -8,7 +8,10 @@
 </head>
 <body>
 <div class="topbar">
-  <div class="brand">🎯 rx_k6 <span style="color:#64748b;font-weight:400">· ระบบจำลองการโจมตี/ทดสอบ</span></div>
+  <div class="brand">
+    <span class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg></span>
+    rx_k6 <span class="dim">· ระบบจำลองการโจมตี/ทดสอบ</span>
+  </div>
   <nav>
     <a href="/" class="active">ควบคุม</a>
     <a href="/dashboard">แดชบอร์ด</a>
@@ -17,7 +20,8 @@
 
 <div class="wrap">
   <div class="banner">
-    ⚠️ ใช้ทดสอบเฉพาะระบบที่คุณเป็นเจ้าของหรือได้รับอนุญาตเป็นลายลักษณ์อักษรเท่านั้น · เซิร์ฟเวอร์นี้เปิดที่ localhost เท่านั้น
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+    <span>ใช้ทดสอบเฉพาะระบบที่คุณเป็นเจ้าของหรือได้รับอนุญาตเป็นลายลักษณ์อักษรเท่านั้น · เซิร์ฟเวอร์นี้เปิดที่ localhost เท่านั้น</span>
   </div>
 
   <h1>ควบคุมการทดสอบ</h1>
@@ -49,7 +53,7 @@
       </label>
 
       <div class="row">
-        <button class="btn" id="runBtn" disabled>▶ เริ่มทดสอบ</button>
+        <button class="btn" id="runBtn" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg> เริ่มทดสอบ</button>
         <a class="btn ghost" href="/dashboard">ดูแดชบอร์ด →</a>
       </div>
     </div>

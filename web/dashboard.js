@@ -95,19 +95,22 @@ async function load() {
   // กราฟ (เฉพาะชุดโหลดที่มี latency)
   if (window.Chart && loadTests.length) {
     const labels = loadTests.map((t) => t.label);
-    const C = { grid: '#e2e8f0', ink: '#0f172a' };
+    // ธีม dark ให้กราฟ: ตัวอักษร/เส้น grid อ่านออกบนพื้นเข้ม
+    Chart.defaults.color = '#94A3B8';
+    Chart.defaults.borderColor = '#2B3750';
+    Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
     charts.push(new Chart(document.getElementById('latChart'), {
       type: 'bar',
       data: { labels, datasets: [
-        { label: 'p95', data: loadTests.map((t) => t.metrics.p95 || 0), backgroundColor: '#2563eb' },
-        { label: 'p99', data: loadTests.map((t) => t.metrics.p99 || 0), backgroundColor: '#93c5fd' },
+        { label: 'p95', data: loadTests.map((t) => t.metrics.p95 || 0), backgroundColor: '#38bdf8' },
+        { label: 'p99', data: loadTests.map((t) => t.metrics.p99 || 0), backgroundColor: '#0ea5e9' },
       ]},
       options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'ms' } } } },
     }));
     charts.push(new Chart(document.getElementById('errChart'), {
       type: 'bar',
       data: { labels, datasets: [{ label: 'error %', data: loadTests.map((t) => t.metrics.failRate || 0),
-        backgroundColor: loadTests.map((t) => (t.metrics.failRate >= 5 ? '#dc2626' : t.metrics.failRate >= 1 ? '#d97706' : '#16a34a')) }] },
+        backgroundColor: loadTests.map((t) => (t.metrics.failRate >= 5 ? '#EF4444' : t.metrics.failRate >= 1 ? '#F59E0B' : '#22C55E')) }] },
       options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, suggestedMax: 5 } } },
     }));
   }
