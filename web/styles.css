@@ -71,3 +71,12 @@ td.dot{text-align:center}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .spacer{flex:1}
 small.hint{color:var(--muted);font-size:12px}
+
+/* --- accessibility (ui-ux-pro-max priority 1-2: keyboard focus, touch, motion) --- */
+.btn,.topbar nav a{min-height:44px}                 /* touch target ≥ 44px */
+.topbar nav a{display:inline-flex;align-items:center;padding:0 4px}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px;border-radius:6px}
+.topbar nav a:focus-visible{outline-color:#fff}
+@media (prefers-reduced-motion:reduce){           /* เคารพผู้ตั้งค่าลดการเคลื่อนไหว */
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
