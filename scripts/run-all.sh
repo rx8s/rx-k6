@@ -28,9 +28,13 @@ run smoke      # ต้องผ่านก่อน ถึงจะมีค�
 run load
 run stress
 run spike
+run throughput
+[ "${SKIP_BREAKPOINT:-0}" = "1" ] || run breakpoint   # อาจนานถึง ~15 นาที (หยุดเองเมื่อเจอจุดพัง)
 [ "${SKIP_SOAK:-0}" = "1" ] || run soak
 run security
 run fuzz
+run payload
+run defense
 
 echo ""; echo "▶  บันทึกผลลง reports/results.db + สร้างรายงานผู้บริหาร ..."
 python3 scripts/make_report.py

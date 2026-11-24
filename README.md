@@ -8,7 +8,7 @@
 
 ---
 
-## ครอบคลุม 4 ด้าน
+## ครอบคลุมหลายด้าน
 
 | ชุด | ไฟล์ | ตอบคำถามผู้บริหาร |
 |-----|------|-------------------|
@@ -16,9 +16,13 @@
 | **Load** | `tests/load.js` | รับโหลดปกติตามที่คาดหวังได้ไหม |
 | **Stress** | `tests/stress.js` | รับได้กี่ผู้ใช้พร้อมกันก่อนเริ่มช้า/ล่ม |
 | **Spike** | `tests/spike.js` | รอด+ฟื้นตัวจาก traffic พุ่งกะทันหันไหม |
+| **Throughput** | `tests/throughput.js` | รับได้สูงสุดกี่ req/s ก่อน error / เจอ rate limit (429) ตรงไหน |
+| **Breakpoint** | `tests/breakpoint.js` | จุดพังจริงอยู่ที่กี่ VUs/req/s (ไต่จนพังแล้วหยุดเอง) |
 | **Soak** | `tests/soak.js` | รันยาวๆ โดยไม่มี memory leak ไหม |
 | **Security** | `tests/security.js` | กรอง SQLi / XSS / Path Traversal / Cmd / NoSQL ได้ไหม |
 | **Fuzz** | `tests/fuzz.js` | รับมือ input ผิดรูปแบบได้โดยไม่ crash ไหม |
+| **Payload** | `tests/payload.js` | จำกัดขนาด body (413) ถูกต้องไหม เมื่อส่ง body ใหญ่ (1KB→10MB) |
+| **Defense** | `tests/defense.js` | เกราะกันโหลดหนัก (rate limit 429/503) ทำงานจริงไหม โดยไม่ล่ม |
 
 ---
 
@@ -36,8 +40,9 @@ npm run web              # node server.js
 ```
 
 ทั้งสองเปิดที่ **http://127.0.0.1:4000** หน้าเว็บ (`web/`) และ API ชุดเดียวกัน
-- หน้า **ควบคุม** (`/`) — ตั้ง BASE_URL, เลือกชุดทดสอบ, ติ๊กยืนยันสิทธิ์, กดรัน แล้วดู log สดๆ
+- หน้า **ควบคุม** (`/`) — ตั้ง BASE_URL, เลือกชุดทดสอบ, **ปรับพารามิเตอร์ของชุดนั้น** (VUs, ระยะเวลา, อัตรา req/s, ขนาด body ฯลฯ — เว้นว่างใช้ค่าเริ่มต้นใน `config/config.js`), ติ๊กยืนยันสิทธิ์, กดรัน แล้วดู log สดๆ
 - หน้า **แดชบอร์ด** (`/dashboard`) — KPI รวม, การ์ดรายด้าน (เขียว/เหลือง/แดง), กราฟ latency & error, ตารางละเอียด, ปุ่มพิมพ์เป็น PDF
+  + **ประวัติการรันทั้งหมดจาก SQLite** — กราฟแนวโน้ม p95/p99 ตามเวลา และตารางทุกการรัน (กรองตามชุดทดสอบได้)
 
 > เซิร์ฟเวอร์ผูกกับ `127.0.0.1` เท่านั้น (เครื่องตัวเอง) และ UI บังคับติ๊กยืนยันสิทธิ์ก่อนรันทุกครั้ง
 > เปลี่ยนพอร์ตได้: `PORT=5000 python3 server.py`
@@ -60,6 +65,7 @@ open reports/executive-report.html
 sqlite3 reports/results.db "SELECT ran_at, p95_ms, fail_rate FROM runs WHERE test_type='load' ORDER BY ran_at"
 ```
 > เวอร์ชัน Node (`server.js`, `make-report.js`) ยังอ่านจากไฟล์ JSON โดยตรง ไม่ได้ใช้ DB
+> รายละเอียด schema, query ตัวอย่าง, การสำรอง/ลบข้อมูลเก่า: [docs/DATABASE.md](docs/DATABASE.md)
 
 ---
 
@@ -113,7 +119,7 @@ lib/helpers.js          ฟังก์ชันร่วม + metric ที่�
 lib/payloads.js         payload ความปลอดภัย + ค่าสำหรับ fuzz (k6)
 lib/summary.js          บันทึกผลลง reports/ (ใช้ร่วมทุก test) (k6)
 scenarios/endpoints.json นิยาม endpoint + field ที่จะทดสอบ inject
-tests/*.js              ชุดทดสอบทั้ง 7 (k6 — JavaScript)
+tests/*.js              ชุดทดสอบทั้ง 11 (k6 — JavaScript)
 scripts/report_core.py  logic อ่าน/สรุปผล (Python) ★   | report-core.js = เวอร์ชัน Node
 scripts/make_report.py  รวมผล → executive-report.html (Python) ★ | make-report.js = Node
 scripts/run-all.sh      รันครบทุกชุด (มีขั้นยืนยันสิทธิ์)
@@ -121,6 +127,16 @@ scripts/test_report_core.py  ทดสอบการนำเข้า SQLite
 reports/                ผลลัพธ์: results.db (SQLite, ถาวร) + JSON จาก k6 + HTML
 ```
 ★ = ค่าเริ่มต้น (Python) · ไฟล์ `*.js` ฝั่งเครื่องมือเป็นเวอร์ชัน Node เดิมที่เก็บไว้
+
+## เอกสารเพิ่มเติม
+| ไฟล์ | เนื้อหา |
+|------|---------|
+| [SECURITY.md](SECURITY.md) | นโยบายการใช้งาน, กลไกป้องกันในตัว, การจัดการ token |
+| [docs/API.md](docs/API.md) | HTTP API ของ web app (request/response, SSE, เกณฑ์สถานะ) |
+| [docs/DATABASE.md](docs/DATABASE.md) | ฐานข้อมูล SQLite: schema, การนำเข้า, query ตัวอย่าง |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | พัฒนาต่อ: เพิ่มชุดทดสอบ/metric, ขั้นตอนก่อน commit |
+| [CHANGELOG.md](CHANGELOG.md) | ประวัติการเปลี่ยนแปลง |
+| [CLAUDE.md](CLAUDE.md) | คู่มือโปรเจกต์ย่อสำหรับ Claude Code |
 
 ## หมายเหตุด้านความปลอดภัย
 ชุด `security.js` ใช้ payload ตรวจจับมาตรฐาน (OWASP) รันด้วย 1 VU แบบสุภาพ

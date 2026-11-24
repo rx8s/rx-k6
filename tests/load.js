@@ -3,14 +3,14 @@
 //   k6 run -e BASE_URL=https://staging.example.com tests/load.js
 // ============================================================================
 import { sleep } from 'k6';
-import { THRESHOLDS, PROFILES, ENDPOINTS, SUMMARY_TREND_STATS } from '../config/config.js';
+import { THRESHOLDS, PROFILES, ENDPOINTS, SUMMARY_TREND_STATS, envInt, envStr } from '../config/config.js';
 import { callEndpoint, thinkTime } from '../lib/helpers.js';
 
 export { handleSummary } from '../lib/summary.js';
 
 export const options = {
-  vus: PROFILES.load.vus,
-  duration: PROFILES.load.duration,
+  vus: envInt('VUS', PROFILES.load.vus),
+  duration: envStr('DURATION', PROFILES.load.duration),
   thresholds: THRESHOLDS,
   summaryTrendStats: SUMMARY_TREND_STATS,
   tags: { test_type: 'load' },

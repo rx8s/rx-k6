@@ -36,8 +36,10 @@ def render(agg):
         m = t["metrics"]
         if t["type"] == "security":
             last = m["securityFindings"]
-        elif t["type"] == "fuzz":
+        elif t["type"] in ("fuzz", "payload"):
             last = m["bizErrors"]
+        elif t["type"] == "defense":
+            last = m["rateLimited"]
         else:
             last = f"{m['checkRate']}%" if m["checkRate"] is not None else "—"
         rows += f"""

@@ -26,10 +26,51 @@ const TESTS = {
   load:     { label: 'Load', note: '~5 นาที · ผู้ใช้คงที่' },
   stress:   { label: 'Stress', note: '~12 นาที · ไต่โหลดหาจุดพัง' },
   spike:    { label: 'Spike', note: '~6 นาที · traffic พุ่งแล้วลด' },
+  throughput: { label: 'Throughput', note: '~3 นาที · ไต่อัตรา req/s หาเพดาน' },
+  breakpoint: { label: 'Breakpoint', note: 'สูงสุด ~15 นาที · ไต่จนพังแล้วหยุดเอง' },
   soak:     { label: 'Soak', note: 'กำหนดเวลาเอง · หา memory leak' },
   security: { label: 'Security (OWASP)', note: '~30 วินาที · สแกนช่องโหว่' },
   fuzz:     { label: 'API Fuzzing', note: '~15 วินาที · input ผิดรูปแบบ' },
+  payload:  { label: 'Payload', note: '~1 นาที · ส่ง body ใหญ่ (1KB→10MB)' },
+  defense:  { label: 'Defense', note: '~1 นาที · ยิงหนักเช็กว่าเกราะ (429/503) ทำงาน' },
 };
+
+// duration ต้องอยู่ในรูป เช่น 30s, 10m, 1h
+const DUR_RE = /^\d+(\.\d+)?(ms|s|m|h)$/;
+const f = (key, label, type, dflt, kw = {}) => ({ key, label, type, default: dflt, ...kw });
+
+// พารามิเตอร์ที่ปรับได้ต่อการรัน (key = env var ที่ test อ่าน; default ควรตรงกับ PROFILES)
+const TEST_OPTIONS = {
+  smoke:      [f('VUS', 'จำนวนผู้ใช้ (VUs)', 'int', 1, { min: 1, max: 200 }), f('DURATION', 'ระยะเวลา', 'dur', '30s', { ph: 'เช่น 30s, 2m' })],
+  load:       [f('VUS', 'จำนวนผู้ใช้ (VUs)', 'int', 50, { min: 1, max: 2000 }), f('DURATION', 'ระยะเวลา', 'dur', '5m', { ph: 'เช่น 5m, 30m' })],
+  stress:     [f('MAX_VUS', 'VUs สูงสุด', 'int', 300, { min: 1, max: 5000 }), f('RAMP_MIN', 'เวลาไต่ (นาที)', 'int', 10, { min: 1, max: 120 })],
+  spike:      [f('BASE_VUS', 'VUs ช่วงปกติ', 'int', 20, { min: 1, max: 2000 }), f('PEAK_VUS', 'VUs ช่วงพีค', 'int', 500, { min: 1, max: 20000 })],
+  throughput: [f('START_RATE', 'เริ่มที่ (req/s)', 'int', 50, { min: 1, max: 20000 }), f('STEP_RATE', 'เพิ่มขั้นละ (req/s)', 'int', 50, { min: 1, max: 20000 }), f('STEPS', 'จำนวนขั้น', 'int', 6, { min: 1, max: 50 }), f('STAGE_SEC', 'แต่ละขั้น (วินาที)', 'int', 30, { min: 5, max: 600 })],
+  breakpoint: [f('MAX_RATE', 'ไต่ถึง (req/s)', 'int', 2000, { min: 10, max: 100000 }), f('RAMP_MIN', 'เวลาไต่ (นาที)', 'int', 15, { min: 1, max: 120 })],
+  soak:       [f('VUS', 'จำนวนผู้ใช้ (VUs)', 'int', 40, { min: 1, max: 2000 }), f('DURATION', 'ระยะเวลา', 'dur', '1h', { ph: 'เช่น 1h, 30m' })],
+  security:   [],
+  fuzz:       [],
+  payload:    [f('MAX_BODY_MB', 'body ใหญ่สุด (MB)', 'int', 10, { min: 1, max: 100 }), f('PER_SIZE', 'ยิงต่อขนาด (ครั้ง)', 'int', 5, { min: 1, max: 100 })],
+  defense:    [f('RATE', 'อัตรายิง (req/s)', 'int', 1000, { min: 1, max: 200000 }), f('SECONDS', 'ระยะเวลา (วินาที)', 'int', 60, { min: 5, max: 3600 })],
+};
+
+// คัดเฉพาะ option ที่ถูกต้องของชุดนั้น คืน { ENV_KEY: 'value' }
+function validateOptions(test, raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const fd of TEST_OPTIONS[test] || []) {
+    const v = raw[fd.key];
+    if (v === undefined || v === null || String(v).trim() === '') continue;
+    if (fd.type === 'int') {
+      const iv = Math.trunc(Number(v));
+      if (!Number.isFinite(iv) || iv < (fd.min ?? 1) || iv > (fd.max ?? 1e12)) continue;
+      out[fd.key] = String(iv);
+    } else if (fd.type === 'dur' && DUR_RE.test(String(v).trim())) {
+      out[fd.key] = String(v).trim();
+    }
+  }
+  return out;
+}
 
 // เก็บสถานะ run ในหน่วยความจำ: runId -> { test, lines[], done, exitCode, listeners[] }
 const runs = new Map();
@@ -68,22 +109,25 @@ function validUrl(u) {
 // ---------------------------------------------------------------------------
 // เริ่มรันชุดทดสอบด้วย k6
 // ---------------------------------------------------------------------------
-function startRun({ test, baseUrl, authToken, soakDuration }) {
+function startRun({ test, baseUrl, authToken, options }) {
   const runId = randomUUID();
   const state = { runId, test, baseUrl, lines: [], done: false, exitCode: null, listeners: [], startedAt: Date.now() };
   runs.set(runId, state);
 
   const env = { ...process.env, TEST_TYPE: test, BASE_URL: baseUrl };
   if (authToken) env.AUTH_TOKEN = authToken;
-  if (test === 'soak' && soakDuration) env.SOAK_DURATION = soakDuration;
 
   const args = ['run', '-e', `TEST_TYPE=${test}`, '-e', `BASE_URL=${baseUrl}`];
-  if (authToken) args.push('-e', `AUTH_TOKEN=${authToken}`);
-  if (test === 'soak' && soakDuration) args.push('-e', `SOAK_DURATION=${soakDuration}`);
+  const shown = [...args]; // สำเนาไว้โชว์ใน log โดยปิดบัง token
+  if (authToken) { args.push('-e', `AUTH_TOKEN=${authToken}`); shown.push('-e', 'AUTH_TOKEN=***'); }
+  for (const [k, v] of Object.entries(options || {})) { // พารามิเตอร์จากหน้าเว็บ (ตรวจแล้ว)
+    env[k] = v; args.push('-e', `${k}=${v}`); shown.push('-e', `${k}=${v}`);
+  }
   args.push(path.join('tests', `${test}.js`));
+  shown.push(path.join('tests', `${test}.js`));
 
   push(state, `▶ เริ่ม ${test} → ${baseUrl}`);
-  push(state, `  คำสั่ง: k6 ${args.join(' ')}`);
+  push(state, `  คำสั่ง: k6 ${shown.join(' ')}`);
 
   let child;
   try {
@@ -141,17 +185,18 @@ const server = http.createServer(async (req, res) => {
       const m = txt.match(/BASE_URL\s*=\s*__ENV\.BASE_URL\s*\|\|\s*'([^']+)'/);
       if (m) cfgDefault = m[1];
     } catch {}
-    return sendJSON(res, 200, { tests: TESTS, defaultBaseUrl: cfgDefault });
+    return sendJSON(res, 200, { tests: TESTS, options: TEST_OPTIONS, defaultBaseUrl: cfgDefault });
   }
 
   // --- API: สั่งรัน ---
   if (p === '/api/run' && req.method === 'POST') {
     const body = await readBody(req);
-    const { test, baseUrl, authToken, soakDuration, authorized } = body;
+    const { test, baseUrl, authToken, authorized } = body;
     if (!TESTS[test]) return sendJSON(res, 400, { error: 'ชุดทดสอบไม่ถูกต้อง' });
     if (!validUrl(baseUrl)) return sendJSON(res, 400, { error: 'BASE_URL ต้องเป็น http(s) ที่ถูกต้อง' });
     if (!authorized) return sendJSON(res, 400, { error: 'ต้องยืนยันว่าได้รับอนุญาตให้ทดสอบเป้าหมายนี้ก่อน' });
-    const runId = startRun({ test, baseUrl, authToken, soakDuration });
+    const options = validateOptions(test, body.options);
+    const runId = startRun({ test, baseUrl, authToken, options });
     return sendJSON(res, 200, { runId });
   }
 

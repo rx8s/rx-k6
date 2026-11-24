@@ -46,6 +46,36 @@ with tempfile.TemporaryDirectory() as d:
     t = agg["tests"][0]
     assert len(agg["tests"]) == 1 and t["metrics"]["p99"] == 500 and t["color"] == "green", t
     assert agg["baseUrl"] == "http://localhost:8080"
-    assert [h["metrics"]["p99"] for h in rc.history(reports_dir=d, db_path=db)] == [500, 300]
+    hist = rc.history(reports_dir=d, db_path=db)
+    assert [h["metrics"]["p99"] for h in hist] == [500, 300]
+    assert [h["color"] for h in hist] == ["green", "yellow"], hist  # error 2% → เฝ้าระวัง
+    assert hist[0]["label"] == rc.TYPE_LABEL["load"] and hist[0]["baseUrl"] == "http://localhost:8080"
+
+# verdict ของชุด throughput: 429 = ดี (เหลือง), error จริง = แดง
+def mx(**kw):
+    base = {"failRate": 0, "thrOk": True, "p95": 100, "bizErrors": 0, "rps": 0,
+            "securityFindings": 0, "rateLimited": 0, "oversizeRejected": 0}
+    base.update(kw)
+    return base
+
+assert rc.verdict("throughput", mx(rps=480, bizErrors=0, rateLimited=0))[0] == "green"
+assert rc.verdict("throughput", mx(rps=300, rateLimited=120))[0] == "yellow"   # โดน rate limit
+assert rc.verdict("throughput", mx(rps=300, bizErrors=50))[0] == "red"         # error จริง
+# verdict ของชุด payload: ตอบ 413 = ดี (เขียว), 5xx/ล่ม = แดง
+assert rc.verdict("payload", mx(oversizeRejected=6))[0] == "green"
+assert rc.verdict("payload", mx(oversizeRejected=0))[0] == "green"
+assert rc.verdict("payload", mx(bizErrors=3))[0] == "red"
+# verdict ของชุด breakpoint: ไต่ครบ (thrOk) = เขียว, พังแบบ error จริง = แดง, ชะลอเฉยๆ = เหลือง
+assert rc.verdict("breakpoint", mx(thrOk=True, maxVus=800))[0] == "green"
+assert rc.verdict("breakpoint", mx(thrOk=False, maxVus=400, bizErrors=60))[0] == "red"
+assert rc.verdict("breakpoint", mx(thrOk=False, maxVus=400, bizErrors=0, p95=2100))[0] == "yellow"
+# verdict ของชุด defense: จำกัด 429/503 ได้ = เขียว, ล่ม 5xx = แดง, ปล่อยผ่านหมด = เหลือง
+assert rc.verdict("defense", mx(rateLimited=5000))[0] == "green"
+assert rc.verdict("defense", mx(bizErrors=12))[0] == "red"
+assert rc.verdict("defense", mx(rateLimited=0, bizErrors=0, rps=1000))[0] == "yellow"
+# metrics() อ่าน counter ใหม่ได้
+_m = rc.metrics({"metrics": {"rate_limited": {"values": {"count": 7}},
+                             "oversize_rejected": {"values": {"count": 2}}}})
+assert _m["rateLimited"] == 7 and _m["oversizeRejected"] == 2, _m
 
 print("OK — report_core SQLite tests passed")

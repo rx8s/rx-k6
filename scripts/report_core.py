@@ -46,11 +46,16 @@ TYPE_LABEL = {
     "stress": "Stress (หาจุดพัง)",
     "spike": "Spike (traffic พุ่ง)",
     "soak": "Soak (รันยาว)",
+    "throughput": "Throughput (เพดาน req/s)",
+    "breakpoint": "Breakpoint (จุดพังจริง)",
     "security": "Security (OWASP)",
     "fuzz": "API Fuzzing",
+    "payload": "Payload (body ใหญ่)",
+    "defense": "Defense (เกราะกันโหลด)",
 }
 
-ORDER = ["smoke", "load", "stress", "spike", "soak", "security", "fuzz"]
+ORDER = ["smoke", "load", "stress", "spike", "throughput", "breakpoint",
+         "soak", "security", "fuzz", "payload", "defense"]
 
 _DATE_RE = re.compile(r"-\d{4}-\d{2}-\d{2}")
 
@@ -127,8 +132,14 @@ def history(limit=200, reports_dir=None, db_path=None):
                            "ORDER BY ran_at DESC, id DESC LIMIT ?", (limit,)).fetchall()
     finally:
         con.close()
-    return [{"file": r["file"], "type": r["test_type"], "baseUrl": r["base_url"], "ranAt": r["ran_at"],
-             "metrics": metrics(json.loads(r["summary_json"]))} for r in rows]
+    items = []
+    for r in rows:
+        mx = metrics(json.loads(r["summary_json"]))
+        color, msg = verdict(r["test_type"], mx)
+        items.append({"file": r["file"], "type": r["test_type"], "label": TYPE_LABEL.get(r["test_type"], r["test_type"]),
+                      "baseUrl": r["base_url"], "ranAt": r["ran_at"], "color": color, "verdict": msg,
+                      "metrics": mx})
+    return items
 
 
 def metrics(data):
@@ -145,6 +156,8 @@ def metrics(data):
     checks = vals("checks")
     sec = vals("security_findings")
     biz = vals("business_errors")
+    rl = vals("rate_limited")
+    oversize = vals("oversize_rejected")
 
     thr_ok, thr_total = True, 0
     for met in m.values():
@@ -169,6 +182,8 @@ def metrics(data):
         "checkFail": checks.get("fails", 0) or 0,
         "securityFindings": sec.get("count", 0) or 0,
         "bizErrors": biz.get("count", 0) or 0,
+        "rateLimited": rl.get("count", 0) or 0,
+        "oversizeRejected": oversize.get("count", 0) or 0,
         "thrOk": thr_ok,
         "thrTotal": thr_total,
     }
@@ -184,6 +199,32 @@ def verdict(test_type, mx):
         if mx["bizErrors"] > 0:
             return ["yellow", f"จัดการ input แปลกไม่ดี {mx['bizErrors']} ครั้ง (ตอบ 5xx/ล่ม)"]
         return ["green", "รับมือ input ผิดรูปแบบได้ดี (ไม่ crash)"]
+    if test_type == "throughput":
+        # bizErrors = error "จริง" (ไม่นับ 429 ที่เป็นการจำกัดอัตราอย่างถูกต้อง)
+        if mx["bizErrors"] > 0:
+            return ["red", f"มี error จริง {mx['bizErrors']} ครั้งขณะไต่อัตรา — เพดานจริงต่ำกว่า ~{mx['rps']} req/s"]
+        if mx["rateLimited"] > 0:
+            return ["yellow", f"แตะ rate limit (429) {mx['rateLimited']} ครั้ง — ระบบจำกัดอัตราที่ ~{mx['rps']} req/s"]
+        return ["green", f"รับได้เฉลี่ย ~{mx['rps']} req/s โดยไม่มี error"]
+    if test_type == "payload":
+        if mx["bizErrors"] > 0:
+            return ["red", f"จัดการ body ใหญ่ไม่ดี {mx['bizErrors']} ครั้ง (5xx/timeout/ล่ม)"]
+        if mx["oversizeRejected"] > 0:
+            return ["green", f"ปฏิเสธ body ใหญ่เกินด้วย 413 อย่างถูกต้อง ({mx['oversizeRejected']} ครั้ง)"]
+        return ["green", "รับ body ขนาดต่างๆ ได้โดยไม่ล่ม"]
+    if test_type == "breakpoint":
+        # thrOk True = ไต่ครบช่วงโดยไม่ abort (ระบบรอดทั้งช่วง), False = เจอจุดพัง (abort)
+        if mx["thrOk"]:
+            return ["green", f"รับโหลดได้ตลอดช่วง ไต่ถึง ~{mx['maxVus']} VUs โดยไม่พัง — เพิ่ม maxRate เพื่อหาเพดานต่อ"]
+        if mx["bizErrors"] > 0:
+            return ["red", f"พบจุดพังที่ ~{mx['maxVus']} VUs — ระบบเริ่มตอบ error จริง {mx['bizErrors']} ครั้ง (p95 {mx['p95']}ms)"]
+        return ["yellow", f"พบเพดานที่ ~{mx['maxVus']} VUs — ชะลอจน p95 {mx['p95']}ms (ยังไม่ crash)"]
+    if test_type == "defense":
+        if mx["bizErrors"] > 0:
+            return ["red", f"เกราะไม่ไหว: ระบบตอบ 5xx/timeout {mx['bizErrors']} ครั้งภายใต้โหลดหนัก"]
+        if mx["rateLimited"] > 0:
+            return ["green", f"เกราะทำงาน: จำกัดอัตราด้วย 429/503 {mx['rateLimited']} ครั้ง ระบบไม่ล่ม"]
+        return ["yellow", f"ไม่พบการจำกัดอัตราภายใต้โหลด ~{mx['rps']} req/s — ระบบรับไว้ทั้งหมด (ตรวจว่ามีเกราะกัน DDoS หรือยัง)"]
     if mx["failRate"] >= 5:
         return ["red", f"error rate สูง {mx['failRate']}%"]
     if (not mx["thrOk"]) or mx["failRate"] >= 1:

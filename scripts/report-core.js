@@ -13,8 +13,12 @@ const TYPE_LABEL = {
   stress: 'Stress (หาจุดพัง)',
   spike: 'Spike (traffic พุ่ง)',
   soak: 'Soak (รันยาว)',
+  throughput: 'Throughput (เพดาน req/s)',
+  breakpoint: 'Breakpoint (จุดพังจริง)',
   security: 'Security (OWASP)',
   fuzz: 'API Fuzzing',
+  payload: 'Payload (body ใหญ่)',
+  defense: 'Defense (เกราะกันโหลด)',
 };
 
 const num = (v, d = 2) => (typeof v === 'number' && isFinite(v) ? Number(v.toFixed(d)) : null);
@@ -51,6 +55,8 @@ function metrics(data) {
   const checks = (m.checks && m.checks.values) || {};
   const sec = (m.security_findings && m.security_findings.values) || {};
   const biz = (m.business_errors && m.business_errors.values) || {};
+  const rl = (m.rate_limited && m.rate_limited.values) || {};
+  const oversize = (m.oversize_rejected && m.oversize_rejected.values) || {};
 
   let thrOk = true, thrTotal = 0;
   for (const met of Object.values(m)) {
@@ -72,6 +78,8 @@ function metrics(data) {
     checkPass: checks.passes || 0, checkFail: checks.fails || 0,
     securityFindings: sec.count || 0,
     bizErrors: biz.count || 0,
+    rateLimited: rl.count || 0,
+    oversizeRejected: oversize.count || 0,
     thrOk, thrTotal,
   };
 }
@@ -85,6 +93,26 @@ function verdict(type, mx) {
   if (type === 'fuzz') {
     if (mx.bizErrors > 0) return ['yellow', `จัดการ input แปลกไม่ดี ${mx.bizErrors} ครั้ง (ตอบ 5xx/ล่ม)`];
     return ['green', 'รับมือ input ผิดรูปแบบได้ดี (ไม่ crash)'];
+  }
+  if (type === 'throughput') {
+    if (mx.bizErrors > 0) return ['red', `มี error จริง ${mx.bizErrors} ครั้งขณะไต่อัตรา — เพดานจริงต่ำกว่า ~${mx.rps} req/s`];
+    if (mx.rateLimited > 0) return ['yellow', `แตะ rate limit (429) ${mx.rateLimited} ครั้ง — ระบบจำกัดอัตราที่ ~${mx.rps} req/s`];
+    return ['green', `รับได้เฉลี่ย ~${mx.rps} req/s โดยไม่มี error`];
+  }
+  if (type === 'payload') {
+    if (mx.bizErrors > 0) return ['red', `จัดการ body ใหญ่ไม่ดี ${mx.bizErrors} ครั้ง (5xx/timeout/ล่ม)`];
+    if (mx.oversizeRejected > 0) return ['green', `ปฏิเสธ body ใหญ่เกินด้วย 413 อย่างถูกต้อง (${mx.oversizeRejected} ครั้ง)`];
+    return ['green', 'รับ body ขนาดต่างๆ ได้โดยไม่ล่ม'];
+  }
+  if (type === 'breakpoint') {
+    if (mx.thrOk) return ['green', `รับโหลดได้ตลอดช่วง ไต่ถึง ~${mx.maxVus} VUs โดยไม่พัง — เพิ่ม maxRate เพื่อหาเพดานต่อ`];
+    if (mx.bizErrors > 0) return ['red', `พบจุดพังที่ ~${mx.maxVus} VUs — ระบบเริ่มตอบ error จริง ${mx.bizErrors} ครั้ง (p95 ${mx.p95}ms)`];
+    return ['yellow', `พบเพดานที่ ~${mx.maxVus} VUs — ชะลอจน p95 ${mx.p95}ms (ยังไม่ crash)`];
+  }
+  if (type === 'defense') {
+    if (mx.bizErrors > 0) return ['red', `เกราะไม่ไหว: ระบบตอบ 5xx/timeout ${mx.bizErrors} ครั้งภายใต้โหลดหนัก`];
+    if (mx.rateLimited > 0) return ['green', `เกราะทำงาน: จำกัดอัตราด้วย 429/503 ${mx.rateLimited} ครั้ง ระบบไม่ล่ม`];
+    return ['yellow', `ไม่พบการจำกัดอัตราภายใต้โหลด ~${mx.rps} req/s — ระบบรับไว้ทั้งหมด (ตรวจว่ามีเกราะกัน DDoS หรือยัง)`];
   }
   if (mx.failRate >= 5) return ['red', `error rate สูง ${mx.failRate}%`];
   if (!mx.thrOk || mx.failRate >= 1) return ['yellow', `ใกล้เกิน SLA (error ${mx.failRate}%, p95 ${mx.p95}ms)`];
@@ -118,7 +146,7 @@ function aggregate() {
   }
 
   // เรียงตามลำดับที่อ่านง่าย
-  const order = ['smoke', 'load', 'stress', 'spike', 'soak', 'security', 'fuzz'];
+  const order = ['smoke', 'load', 'stress', 'spike', 'throughput', 'breakpoint', 'soak', 'security', 'fuzz', 'payload', 'defense'];
   tests.sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
 
   const overall = { green: 'ระบบอยู่ในเกณฑ์ดี', yellow: 'มีจุดควรเฝ้าระวัง', red: 'มีประเด็นที่ต้องแก้ไข' }[worst];

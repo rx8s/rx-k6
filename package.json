@@ -8,9 +8,13 @@
     "load": "k6 run -e TEST_TYPE=load tests/load.js",
     "stress": "k6 run -e TEST_TYPE=stress tests/stress.js",
     "spike": "k6 run -e TEST_TYPE=spike tests/spike.js",
+    "throughput": "k6 run -e TEST_TYPE=throughput tests/throughput.js",
+    "breakpoint": "k6 run -e TEST_TYPE=breakpoint tests/breakpoint.js",
     "soak": "k6 run -e TEST_TYPE=soak tests/soak.js",
     "security": "k6 run -e TEST_TYPE=security tests/security.js",
     "fuzz": "k6 run -e TEST_TYPE=fuzz tests/fuzz.js",
+    "payload": "k6 run -e TEST_TYPE=payload tests/payload.js",
+    "defense": "k6 run -e TEST_TYPE=defense tests/defense.js",
     "report": "node scripts/make-report.js",
     "all": "bash scripts/run-all.sh",
     "web": "node server.js"

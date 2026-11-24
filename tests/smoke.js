@@ -3,14 +3,14 @@
 //   รันอันนี้ก่อนเสมอ เพื่อยืนยันว่า BASE_URL/endpoint ถูกต้อง
 // ============================================================================
 import { sleep } from 'k6';
-import { PROFILES, ENDPOINTS, SUMMARY_TREND_STATS } from '../config/config.js';
+import { PROFILES, ENDPOINTS, SUMMARY_TREND_STATS, envInt, envStr } from '../config/config.js';
 import { callEndpoint } from '../lib/helpers.js';
 
 export { handleSummary } from '../lib/summary.js';
 
 export const options = {
-  vus: PROFILES.smoke.vus,
-  duration: PROFILES.smoke.duration,
+  vus: envInt('VUS', PROFILES.smoke.vus),
+  duration: envStr('DURATION', PROFILES.smoke.duration),
   thresholds: {
     http_req_failed: ['rate<0.01'],
     checks_passed: ['rate>0.95'],

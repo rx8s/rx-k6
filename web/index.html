@@ -27,7 +27,7 @@
   <h1>ควบคุมการทดสอบ</h1>
   <p class="sub">ตั้งค่าเป้าหมาย เลือกชุดทดสอบ แล้วสั่งรัน — ดูผลสดด้านขวา และสรุปภาพรวมที่หน้าแดชบอร์ด</p>
 
-  <div class="grid2">
+  <div class="stack">
     <!-- ฟอร์มตั้งค่า -->
     <div class="panel">
       <h2>ตั้งค่า</h2>
@@ -42,10 +42,8 @@
       <label>ชุดทดสอบ</label>
       <div class="tests" id="tests"></div>
 
-      <div id="soakWrap" style="display:none">
-        <label for="soakDuration">ระยะเวลา Soak</label>
-        <input type="text" id="soakDuration" value="10m" placeholder="เช่น 10m, 1h">
-      </div>
+      <!-- พารามิเตอร์ของชุดที่เลือก (สร้างจาก /api/config) -->
+      <div id="options"></div>
 
       <label class="checkbox">
         <input type="checkbox" id="authorized">

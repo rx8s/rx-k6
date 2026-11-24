@@ -36,16 +36,77 @@ TESTS = {
     "load":     {"label": "Load", "note": "~5 นาที · ผู้ใช้คงที่"},
     "stress":   {"label": "Stress", "note": "~12 นาที · ไต่โหลดหาจุดพัง"},
     "spike":    {"label": "Spike", "note": "~6 นาที · traffic พุ่งแล้วลด"},
+    "throughput": {"label": "Throughput", "note": "~3 นาที · ไต่อัตรา req/s หาเพดาน"},
+    "breakpoint": {"label": "Breakpoint", "note": "สูงสุด ~15 นาที · ไต่จนพังแล้วหยุดเอง"},
     "soak":     {"label": "Soak", "note": "กำหนดเวลาเอง · หา memory leak"},
     "security": {"label": "Security (OWASP)", "note": "~30 วินาที · สแกนช่องโหว่"},
     "fuzz":     {"label": "API Fuzzing", "note": "~15 วินาที · input ผิดรูปแบบ"},
+    "payload":  {"label": "Payload", "note": "~1 นาที · ส่ง body ใหญ่ (1KB→10MB)"},
+    "defense":  {"label": "Defense", "note": "~1 นาที · ยิงหนักเช็กว่าเกราะ (429/503) ทำงาน"},
 }
 
 MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
         ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8"}
 
-# soak duration ต้องอยู่ในรูป เช่น 30s, 10m, 1h (กันค่าแปลกปลอม)
+# duration ต้องอยู่ในรูป เช่น 30s, 10m, 1h (กันค่าแปลกปลอม)
 _DUR_RE = re.compile(r"^\d+(\.\d+)?(ms|s|m|h)$")
+
+
+def _f(key, label, typ, default, **kw):
+    return {"key": key, "label": label, "type": typ, "default": default, **kw}
+
+
+# พารามิเตอร์ที่ปรับได้ต่อการรันแต่ละชุด (key = env var ที่ไฟล์ test อ่าน; default ควรตรงกับ PROFILES)
+#   type int = ตัวเลข (มี min/max), dur = ระยะเวลาเช่น 30s/5m/1h
+#   server รับเฉพาะ key ที่อยู่ในสเปกของชุดนั้น + ตรวจชนิด/ช่วง ก่อนส่งให้ k6 (กันค่าปลอม)
+TEST_OPTIONS = {
+    "smoke":      [_f("VUS", "จำนวนผู้ใช้ (VUs)", "int", 1, min=1, max=200),
+                   _f("DURATION", "ระยะเวลา", "dur", "30s", ph="เช่น 30s, 2m")],
+    "load":       [_f("VUS", "จำนวนผู้ใช้ (VUs)", "int", 50, min=1, max=2000),
+                   _f("DURATION", "ระยะเวลา", "dur", "5m", ph="เช่น 5m, 30m")],
+    "stress":     [_f("MAX_VUS", "VUs สูงสุด", "int", 300, min=1, max=5000),
+                   _f("RAMP_MIN", "เวลาไต่ (นาที)", "int", 10, min=1, max=120)],
+    "spike":      [_f("BASE_VUS", "VUs ช่วงปกติ", "int", 20, min=1, max=2000),
+                   _f("PEAK_VUS", "VUs ช่วงพีค", "int", 500, min=1, max=20000)],
+    "throughput": [_f("START_RATE", "เริ่มที่ (req/s)", "int", 50, min=1, max=20000),
+                   _f("STEP_RATE", "เพิ่มขั้นละ (req/s)", "int", 50, min=1, max=20000),
+                   _f("STEPS", "จำนวนขั้น", "int", 6, min=1, max=50),
+                   _f("STAGE_SEC", "แต่ละขั้น (วินาที)", "int", 30, min=5, max=600)],
+    "breakpoint": [_f("MAX_RATE", "ไต่ถึง (req/s)", "int", 2000, min=10, max=100000),
+                   _f("RAMP_MIN", "เวลาไต่ (นาที)", "int", 15, min=1, max=120)],
+    "soak":       [_f("VUS", "จำนวนผู้ใช้ (VUs)", "int", 40, min=1, max=2000),
+                   _f("DURATION", "ระยะเวลา", "dur", "1h", ph="เช่น 1h, 30m")],
+    "security":   [],
+    "fuzz":       [],
+    "payload":    [_f("MAX_BODY_MB", "body ใหญ่สุด (MB)", "int", 10, min=1, max=100),
+                   _f("PER_SIZE", "ยิงต่อขนาด (ครั้ง)", "int", 5, min=1, max=100)],
+    "defense":    [_f("RATE", "อัตรายิง (req/s)", "int", 1000, min=1, max=200000),
+                   _f("SECONDS", "ระยะเวลา (วินาที)", "int", 60, min=5, max=3600)],
+}
+
+
+def validate_options(test, raw):
+    """คัดเฉพาะ option ที่ถูกต้องของชุดนั้น คืน dict {ENV_KEY: str} สำหรับส่งให้ k6"""
+    out = {}
+    if not isinstance(raw, dict):
+        return out
+    for f in TEST_OPTIONS.get(test, []):
+        v = raw.get(f["key"])
+        if v is None or str(v).strip() == "":
+            continue  # ไม่กรอก = ใช้ค่า default ใน config
+        if f["type"] == "int":
+            try:
+                iv = int(float(v))
+            except (TypeError, ValueError):
+                continue
+            if iv < f.get("min", 1) or iv > f.get("max", 10 ** 12):
+                continue
+            out[f["key"]] = str(iv)
+        elif f["type"] == "dur":
+            s = str(v).strip()
+            if _DUR_RE.match(s):
+                out[f["key"]] = s
+    return out
 
 _runs = {}          # runId -> Run
 _runs_lock = threading.Lock()
@@ -99,24 +160,28 @@ def valid_url(u):
         return False
 
 
-def start_run(test, base_url, auth_token="", soak_duration=""):
+def start_run(test, base_url, auth_token="", extra_env=None):
     run = Run(test, base_url)
     run_id = str(uuid.uuid4())
     with _runs_lock:
         _runs[run_id] = run
 
     args = ["k6", "run", "-e", f"TEST_TYPE={test}", "-e", f"BASE_URL={base_url}"]
+    shown = list(args)  # สำเนาไว้โชว์ใน log โดยปิดบัง token
     env = dict(os.environ, TEST_TYPE=test, BASE_URL=base_url)
     if auth_token:
         args += ["-e", f"AUTH_TOKEN={auth_token}"]
+        shown += ["-e", "AUTH_TOKEN=***"]  # ไม่โชว์ token จริงใน log
         env["AUTH_TOKEN"] = auth_token
-    if test == "soak" and soak_duration and _DUR_RE.match(soak_duration):
-        args += ["-e", f"SOAK_DURATION={soak_duration}"]
-        env["SOAK_DURATION"] = soak_duration
+    for k, v in (extra_env or {}).items():      # พารามิเตอร์จากหน้าเว็บ (ตรวจแล้วใน validate_options)
+        args += ["-e", f"{k}={v}"]
+        shown += ["-e", f"{k}={v}"]
+        env[k] = v
     args.append(os.path.join("tests", f"{test}.js"))
+    shown.append(os.path.join("tests", f"{test}.js"))
 
     run.push(f"▶ เริ่ม {test} → {base_url}")
-    run.push("  คำสั่ง: " + " ".join(args))
+    run.push("  คำสั่ง: " + " ".join(shown))
 
     def worker():
         try:
@@ -217,7 +282,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(full)
 
         if p == "/api/config":
-            return self._json(200, {"tests": TESTS, "defaultBaseUrl": read_config_default()})
+            return self._json(200, {"tests": TESTS, "options": TEST_OPTIONS,
+                                    "defaultBaseUrl": read_config_default()})
 
         if p == "/api/dashboard":
             return self._json(200, aggregate())
@@ -243,8 +309,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(400, {"error": "BASE_URL ต้องเป็น http(s) ที่ถูกต้อง"})
             if not b.get("authorized"):
                 return self._json(400, {"error": "ต้องยืนยันว่าได้รับอนุญาตให้ทดสอบเป้าหมายนี้ก่อน"})
-            run_id = start_run(test, base_url, (b.get("authToken") or "").strip(),
-                               (b.get("soakDuration") or "").strip())
+            opts = validate_options(test, b.get("options") or {})
+            run_id = start_run(test, base_url, (b.get("authToken") or "").strip(), opts)
             return self._json(200, {"runId": run_id})
 
         self.send_response(404); self.end_headers()

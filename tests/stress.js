@@ -3,12 +3,13 @@
 //   ใช้ตอบผู้บริหารว่า "ระบบรับได้กี่ผู้ใช้พร้อมกันก่อนเริ่มช้า/ล่ม"
 // ============================================================================
 import { sleep } from 'k6';
-import { PROFILES, ENDPOINTS, SUMMARY_TREND_STATS } from '../config/config.js';
+import { PROFILES, ENDPOINTS, SUMMARY_TREND_STATS, envInt } from '../config/config.js';
 import { callEndpoint } from '../lib/helpers.js';
 
 export { handleSummary } from '../lib/summary.js';
 
-const { maxVus, rampMinutes } = PROFILES.stress;
+const maxVus = envInt('MAX_VUS', PROFILES.stress.maxVus);
+const rampMinutes = envInt('RAMP_MIN', PROFILES.stress.rampMinutes);
 
 export const options = {
   // ค่อยๆ ไต่ขึ้นเป็นขั้น เพื่อดูว่าเริ่มเสื่อมที่โหลดเท่าไร
