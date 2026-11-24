@@ -21,13 +21,14 @@ const HOST = '127.0.0.1'; // local-only เพื่อความปลอด�
 
 // ชุดทดสอบที่อนุญาตให้สั่งผ่าน UI (allowlist กัน command injection)
 const TESTS = {
-  smoke:    { label: 'Smoke (เช็กเบื้องต้น)', note: 'เบามาก ~30s' },
-  load:     { label: 'Load (โหลดปกติ)', note: 'ตามค่า PROFILES.load' },
-  stress:   { label: 'Stress (หาจุดพัง)', note: 'ไต่โหลดขึ้นเรื่อยๆ' },
-  spike:    { label: 'Spike (traffic พุ่ง)', note: 'พุ่งแล้วลด' },
-  soak:     { label: 'Soak (รันยาว)', note: 'ใช้เวลานาน' },
-  security: { label: 'Security (OWASP)', note: 'สแกนช่องโหว่ 1 VU' },
-  fuzz:     { label: 'API Fuzzing', note: 'ยิง input ผิดรูปแบบ' },
+  // note = เวลาโดยประมาณตาม PROFILES ใน config/config.js (แก้คู่กันถ้าปรับ profile)
+  smoke:    { label: 'Smoke', note: '~30 วินาที · เช็กว่าระบบตอบได้' },
+  load:     { label: 'Load', note: '~5 นาที · ผู้ใช้คงที่' },
+  stress:   { label: 'Stress', note: '~12 นาที · ไต่โหลดหาจุดพัง' },
+  spike:    { label: 'Spike', note: '~6 นาที · traffic พุ่งแล้วลด' },
+  soak:     { label: 'Soak', note: 'กำหนดเวลาเอง · หา memory leak' },
+  security: { label: 'Security (OWASP)', note: '~30 วินาที · สแกนช่องโหว่' },
+  fuzz:     { label: 'API Fuzzing', note: '~15 วินาที · input ผิดรูปแบบ' },
 };
 
 // เก็บสถานะ run ในหน่วยความจำ: runId -> { test, lines[], done, exitCode, listeners[] }
