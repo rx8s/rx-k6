@@ -1,5 +1,6 @@
 reports/*.json
 reports/*.html
+reports/*.db
 node_modules/
 .DS_Store
 

@@ -32,6 +32,6 @@ run spike
 run security
 run fuzz
 
-echo ""; echo "▶  สร้างรายงานผู้บริหาร ..."
-node scripts/make-report.js
+echo ""; echo "▶  บันทึกผลลง reports/results.db + สร้างรายงานผู้บริหาร ..."
+python3 scripts/make_report.py
 echo ""; echo "เปิดรายงาน:  open reports/executive-report.html"

@@ -22,7 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts"))
-from report_core import aggregate, metrics, REPORTS_DIR  # noqa: E402
+from report_core import aggregate, history, ingest, REPORTS_DIR, DB_PATH  # noqa: E402
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.join(ROOT, "web")
@@ -136,6 +136,11 @@ def start_run(test, base_url, auth_token="", soak_duration=""):
         for line in proc.stdout:
             run.push(line.rstrip("\n"))
         code = proc.wait()
+        try:
+            if ingest():
+                run.push(f"💾 บันทึกผลลง {os.path.relpath(DB_PATH, ROOT)} แล้ว")
+        except Exception as e:  # noqa: BLE001 — DB พังต้องไม่ทำให้ผลการรันหาย (JSON ยังอยู่)
+            run.push(f"⚠️ บันทึกลง SQLite ไม่สำเร็จ: {e} (ไฟล์ JSON ยังอยู่ใน reports/)")
         run.push("")
         run.push("✅ เสร็จสมบูรณ์" if code == 0
                  else f"⚠️ จบด้วย exit code {code} (ดูผลที่บันทึกไว้ได้ในแดชบอร์ด)")
@@ -218,24 +223,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, aggregate())
 
         if p == "/api/history":
-            items = []
-            try:
-                for f in os.listdir(REPORTS_DIR):
-                    if not f.endswith(".json") or f == "latest.json":
-                        continue
-                    full = os.path.join(REPORTS_DIR, f)
-                    mx = None
-                    try:
-                        with open(full, encoding="utf-8") as fh:
-                            mx = metrics(json.load(fh))
-                    except Exception:  # noqa: BLE001
-                        pass
-                    items.append({"file": f, "type": re.split(r"-\d{4}-\d{2}-\d{2}", f)[0],
-                                  "ranAt": os.path.getmtime(full) * 1000, "metrics": mx})
-                items.sort(key=lambda x: x["ranAt"], reverse=True)
-            except OSError:
-                pass
-            return self._json(200, {"items": items})
+            return self._json(200, {"items": history()})
 
         if p.startswith("/api/stream/"):
             return self._stream(p.rsplit("/", 1)[-1])

@@ -49,6 +49,18 @@ python3 scripts/make_report.py     # หรือ  node scripts/make-report.js
 open reports/executive-report.html
 ```
 
+### ผลทดสอบเก็บใน SQLite (`reports/results.db`)
+ทุกการรันถูกเก็บถาวรในตาราง `runs` (1 แถว = 1 การรัน) — แดชบอร์ดและรายงานอ่านจาก DB นี้
+- k6 เขียนผลเป็น `reports/*.json` → นำเข้า DB อัตโนมัติเมื่อรันจบผ่าน web app, เมื่อเปิดแดชบอร์ด และใน `run-all.sh`
+- นำเข้าเอง (เช่น หลังรัน `k6 run` ตรงๆ): `python3 scripts/report_core.py`
+- คอลัมน์: `test_type, base_url, ran_at, total_reqs, rps, avg_ms, p95_ms, p99_ms, max_ms, fail_rate, max_vus, check_rate, security_findings, biz_errors, thresholds_ok` + `summary_json` (summary ดิบของ k6)
+
+ตัวอย่าง: แนวโน้ม p95 ของชุด load
+```bash
+sqlite3 reports/results.db "SELECT ran_at, p95_ms, fail_rate FROM runs WHERE test_type='load' ORDER BY ran_at"
+```
+> เวอร์ชัน Node (`server.js`, `make-report.js`) ยังอ่านจากไฟล์ JSON โดยตรง ไม่ได้ใช้ DB
+
 ---
 
 ## เริ่มใช้งาน (CLI)
@@ -105,7 +117,8 @@ tests/*.js              ชุดทดสอบทั้ง 7 (k6 — JavaScrip
 scripts/report_core.py  logic อ่าน/สรุปผล (Python) ★   | report-core.js = เวอร์ชัน Node
 scripts/make_report.py  รวมผล → executive-report.html (Python) ★ | make-report.js = Node
 scripts/run-all.sh      รันครบทุกชุด (มีขั้นยืนยันสิทธิ์)
-reports/                ผลลัพธ์ (JSON + HTML)
+scripts/test_report_core.py  ทดสอบการนำเข้า SQLite
+reports/                ผลลัพธ์: results.db (SQLite, ถาวร) + JSON จาก k6 + HTML
 ```
 ★ = ค่าเริ่มต้น (Python) · ไฟล์ `*.js` ฝั่งเครื่องมือเป็นเวอร์ชัน Node เดิมที่เก็บไว้
 

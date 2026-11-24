@@ -1,15 +1,44 @@
 #!/usr/bin/env python3
 # ============================================================================
 # report_core.py — logic อ่าน/สรุปผล k6 ที่ใช้ร่วมกัน (make_report.py + server.py)
-#   พอร์ตมาจาก scripts/report-core.js (ฝั่ง Node) ให้ผลเหมือนกัน
+#   ผลทุกครั้งเก็บถาวรใน SQLite: reports/results.db (ตาราง runs)
+#   k6 เขียน reports/*.json → ingest() นำเข้า DB (รันซ้ำได้ ไม่ซ้ำ) → แดชบอร์ดอ่านจาก DB
+#
+#   นำเข้าเอง:  python3 scripts/report_core.py
 # ============================================================================
 import json
 import os
 import re
+import sqlite3
 from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPORTS_DIR = os.path.join(ROOT, "reports")
+DB_PATH = os.path.join(REPORTS_DIR, "results.db")
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS runs (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  file              TEXT    NOT NULL UNIQUE,   -- ไฟล์ k6 ต้นทาง (กันนำเข้าซ้ำ)
+  test_type         TEXT    NOT NULL,
+  base_url          TEXT,
+  ran_at            TEXT    NOT NULL,          -- ISO-8601 UTC
+  total_reqs        INTEGER,
+  rps               REAL,
+  avg_ms            REAL,
+  p95_ms            REAL,
+  p99_ms            REAL,
+  max_ms            REAL,
+  fail_rate         REAL,                      -- %
+  max_vus           INTEGER,
+  check_rate        REAL,                      -- %
+  security_findings INTEGER,
+  biz_errors        INTEGER,
+  thresholds_ok     INTEGER,                   -- 1 = ผ่านทุก threshold
+  summary_json      TEXT    NOT NULL           -- summary ดิบของ k6 ทั้งก้อน
+);
+CREATE INDEX IF NOT EXISTS idx_runs_type_time ON runs (test_type, ran_at);
+"""
 
 TYPE_LABEL = {
     "smoke": "Smoke (เช็กเบื้องต้น)",
@@ -40,29 +69,66 @@ def _num(v, d=2):
         return None
 
 
-def load_latest_per_type():
-    """อ่านไฟล์ผลล่าสุดของแต่ละ test type"""
-    if not os.path.isdir(REPORTS_DIR):
-        return {}
-    by_type = {}
-    for f in os.listdir(REPORTS_DIR):
-        if not f.endswith(".json") or f in ("latest.json", "executive-report.json"):
-            continue
-        m = _DATE_RE.split(f)
-        test_type = m[0]
-        full = os.path.join(REPORTS_DIR, f)
-        mtime = os.path.getmtime(full)
-        if test_type not in by_type or mtime > by_type[test_type]["mtime"]:
-            by_type[test_type] = {"mtime": mtime, "file": full, "name": f}
-    result = {}
-    for t, info in by_type.items():
-        try:
-            with open(info["file"], encoding="utf-8") as fh:
-                info = {**info, "data": json.load(fh)}
-            result[t] = info
-        except (OSError, json.JSONDecodeError):
-            pass
-    return result
+def _connect(db_path=None):
+    con = sqlite3.connect(db_path or DB_PATH, timeout=10)  # timeout: server หลาย thread เขียนพร้อมกันได้
+    con.row_factory = sqlite3.Row
+    con.executescript(SCHEMA)
+    return con
+
+
+def _iso_utc(s):
+    return datetime.fromisoformat(s).astimezone(timezone.utc).isoformat(timespec="seconds")
+
+
+def ingest(reports_dir=None, db_path=None):
+    """นำไฟล์ผล k6 (reports/*.json) เข้า SQLite — ไฟล์ที่นำเข้าแล้วจะถูกข้าม คืนจำนวนแถวที่เพิ่ม"""
+    reports_dir = reports_dir or REPORTS_DIR
+    if not os.path.isdir(reports_dir):
+        return 0
+    added = 0
+    con = _connect(db_path)
+    try:
+        known = {r[0] for r in con.execute("SELECT file FROM runs")}
+        for f in sorted(os.listdir(reports_dir)):
+            if (not f.endswith(".json") or f in known
+                    or f in ("latest.json", "executive-report.json")):
+                continue
+            full = os.path.join(reports_dir, f)
+            try:
+                with open(full, encoding="utf-8") as fh:
+                    data = json.load(fh)
+            except (OSError, json.JSONDecodeError):
+                continue  # ไฟล์ยังเขียนไม่เสร็จ/เสีย — ลองใหม่รอบหน้า
+            meta = data.get("rx_meta") or {}
+            ran_at = (_iso_utc(meta["ranAt"]) if meta.get("ranAt") else
+                      datetime.fromtimestamp(os.path.getmtime(full), timezone.utc).isoformat(timespec="seconds"))
+            mx = metrics(data)
+            cur = con.execute(
+                """INSERT OR IGNORE INTO runs (file, test_type, base_url, ran_at, total_reqs, rps, avg_ms,
+                   p95_ms, p99_ms, max_ms, fail_rate, max_vus, check_rate, security_findings, biz_errors,
+                   thresholds_ok, summary_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (f, meta.get("testType") or _DATE_RE.split(f)[0], meta.get("baseUrl"), ran_at,
+                 mx["totalReqs"], mx["rps"], mx["avg"], mx["p95"], mx["p99"], mx["max"], mx["failRate"],
+                 mx["maxVus"], mx["checkRate"], mx["securityFindings"], mx["bizErrors"], int(mx["thrOk"]),
+                 json.dumps(data, ensure_ascii=False)))
+            added += cur.rowcount
+        con.commit()
+    finally:
+        con.close()
+    return added
+
+
+def history(limit=200, reports_dir=None, db_path=None):
+    """ประวัติการรันทั้งหมด ใหม่สุดก่อน"""
+    ingest(reports_dir, db_path)
+    con = _connect(db_path)
+    try:
+        rows = con.execute("SELECT file, test_type, base_url, ran_at, summary_json FROM runs "
+                           "ORDER BY ran_at DESC, id DESC LIMIT ?", (limit,)).fetchall()
+    finally:
+        con.close()
+    return [{"file": r["file"], "type": r["test_type"], "baseUrl": r["base_url"], "ranAt": r["ran_at"],
+             "metrics": metrics(json.loads(r["summary_json"]))} for r in rows]
 
 
 def metrics(data):
@@ -125,24 +191,25 @@ def verdict(test_type, mx):
     return ["green", f"ผ่าน SLA (error {mx['failRate']}%, p95 {mx['p95']}ms)"]
 
 
-def aggregate():
-    """รวมทุก type เป็นโครงสร้างเดียว (ใช้ได้ทั้ง API และ render HTML)"""
-    all_runs = load_latest_per_type()
-
-    base_url = "—"
-    latest = os.path.join(REPORTS_DIR, "latest.json")
-    if os.path.isfile(latest):
-        try:
-            with open(latest, encoding="utf-8") as fh:
-                base_url = json.load(fh).get("baseUrl") or "—"
-        except (OSError, json.JSONDecodeError):
-            pass
+def aggregate(reports_dir=None, db_path=None):
+    """รวมผลล่าสุดของแต่ละ type (จาก DB) เป็นโครงสร้างเดียว — ใช้ทั้ง API และ render HTML"""
+    ingest(reports_dir, db_path)
+    con = _connect(db_path)
+    try:
+        latest = {}
+        for r in con.execute("SELECT test_type, ran_at, summary_json FROM runs ORDER BY ran_at, id"):
+            latest[r["test_type"]] = r  # แถวหลังทับแถวก่อน → เหลือล่าสุดของแต่ละ type
+        last = con.execute("SELECT base_url FROM runs WHERE base_url IS NOT NULL "
+                           "ORDER BY ran_at DESC, id DESC LIMIT 1").fetchone()
+    finally:
+        con.close()
+    base_url = last[0] if last else "—"
 
     rank = {"green": 0, "yellow": 1, "red": 2}
     worst = "green"
     tests = []
-    for t, info in all_runs.items():
-        mx = metrics(info["data"])
+    for t, r in latest.items():
+        mx = metrics(json.loads(r["summary_json"]))
         color, msg = verdict(t, mx)
         if rank[color] > rank[worst]:
             worst = color
@@ -152,7 +219,7 @@ def aggregate():
             "color": color,
             "verdict": msg,
             "metrics": mx,
-            "ranAt": datetime.fromtimestamp(info["mtime"], timezone.utc).isoformat(),
+            "ranAt": r["ran_at"],
         })
 
     tests.sort(key=lambda x: ORDER.index(x["type"]) if x["type"] in ORDER else 99)
@@ -168,3 +235,11 @@ def aggregate():
         "tests": tests,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
     }
+
+
+if __name__ == "__main__":
+    n = ingest()
+    con = _connect()
+    total = con.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
+    con.close()
+    print(f"✅ นำเข้าใหม่ {n} รายการ · ทั้งหมด {total} รายการใน {DB_PATH}")
