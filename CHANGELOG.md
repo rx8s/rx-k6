@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Added
+- `LICENSE` — เผยแพร่ภายใต้ MIT License (อ้างอิงใน README และ `package.json`)
+
 ## 2026-11-27
 
 ### Added

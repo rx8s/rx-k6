@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "เฟรมเวิร์กจำลองการโจมตี/ทดสอบระบบ (Load, Stress, Spike, Soak, Security, Fuzz) ด้วย k6 พร้อมรายงานผู้บริหาร",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "smoke": "k6 run -e TEST_TYPE=smoke tests/smoke.js",
     "load": "k6 run -e TEST_TYPE=load tests/load.js",
