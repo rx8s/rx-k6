@@ -137,6 +137,7 @@ reports/                ผลลัพธ์: results.db (SQLite, ถาวร)
 | [docs/DATABASE.md](docs/DATABASE.md) | ฐานข้อมูล SQLite: schema, การนำเข้า, query ตัวอย่าง |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | พัฒนาต่อ: เพิ่มชุดทดสอบ/metric, ขั้นตอนก่อน commit |
 | [CHANGELOG.md](CHANGELOG.md) | ประวัติการเปลี่ยนแปลง |
+| [ROADMAP.md](ROADMAP.md) | งานที่เหลือ: ปิดงานค้าง, เตรียมเปิด public, คุณภาพโค้ด |
 | [CLAUDE.md](CLAUDE.md) | คู่มือโปรเจกต์ย่อสำหรับ Claude Code |
 
 ## หมายเหตุด้านความปลอดภัย

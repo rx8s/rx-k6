@@ -4,7 +4,10 @@
 
 ## [Unreleased]
 
+## 2026-11-27
+
 ### Added
+- `ROADMAP.md` — แผนงานที่เหลือ (ปิดงานค้าง, เตรียมเปิด repo เป็น public, คุณภาพโค้ด)
 - CI บน GitHub Actions (`.github/workflows/ci.yml`) รันทุก PR: `py_compile`, `test_report_core.py`,
   `test_server.py`, `node --check` ทุกไฟล์ JS และ `k6 inspect` ทุกชุดทดสอบ (ไม่ยิง request จริง)
 - เทสต์ `scripts/test_server.py` สำหรับ `server.py` — ตรวจ Host/Origin, allowlist, พารามิเตอร์,
@@ -22,6 +25,8 @@
 - แดชบอร์ด escape ชื่อชุดทดสอบ/ข้อความ verdict ก่อนแสดง (ข้อมูลจาก DB)
 - `AUTH_TOKEN` ถูกปิดบังเป็น `***` ในบรรทัด "คำสั่ง:" ของ log สด (เดิมโชว์ค่าจริง)
 - พารามิเตอร์จากหน้าเว็บถูกตรวจชนิด/ช่วง + รับเฉพาะ key ที่กำหนดต่อชุด ก่อนส่งเป็น `-e` ให้ k6
+- เอกสารการกันคำขอจากเว็บอื่น (Host/Origin/Content-Type, response 403/415, ตัวอย่าง curl)
+  ใน `docs/API.md` และ `SECURITY.md` (PR #2)
 
 ### Fixed
 - `server.py` ตัด connection ทิ้งโดยไม่ตอบ เมื่อได้ค่าผิดชนิด เช่น `test` เป็น list,
@@ -35,6 +40,8 @@
   — ตอนนี้อ่าน `tags.test_type` ของไฟล์ test ได้ถูกต้อง
 - Security scan ฟ้องผิด: ตัด signature `49` และ `uid=` ที่ชนข้อมูลปกติ
   (id, timestamp, query string) ใช้รูปแบบผลคำสั่ง `id` จริงแทน
+- URL เป้าหมายในหัวแดชบอร์ดถูก escape ก่อนแสดง
+- แถวตารางแดชบอร์ดขาดช่องว่างก่อน `aria-label` ทำให้ HTML parse ผิด (PR #2)
 
 ### Added — ชุดทดสอบ
 - ชุดทดสอบใหม่ **Throughput** (`tests/throughput.js`) — ไต่อัตรา req/s เป็นขั้นด้วย
@@ -51,9 +58,6 @@
 - `/api/history` ส่ง `label`, `color`, `verdict` ของแต่ละการรัน
 - metric ใหม่ `rateLimited` (429) และ `oversizeRejected` (413) ในผลสรุป
 - เอกสาร: `CLAUDE.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `docs/API.md`, `docs/DATABASE.md`
-
-### Fixed
-- URL เป้าหมายในหัวแดชบอร์ดถูก escape ก่อนแสดง
 
 ## 2026-11-24
 

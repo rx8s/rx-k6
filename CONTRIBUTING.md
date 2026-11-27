@@ -4,7 +4,8 @@
 
 - [k6](https://k6.io) (`brew install k6`)
 - Python 3.9+ (ใช้ stdlib ล้วน ไม่ต้อง `pip install`)
-- Node 18+ เฉพาะถ้าจะใช้เวอร์ชัน Node (`server.js`, `make-report.js`)
+- Node 22+ — ใช้กับเวอร์ชัน Node (`server.js`, `make-report.js`) และ `node --check tests/*.js`
+  (รุ่นเก่ากว่านี้ `node --check` ไฟล์ test ไม่ผ่าน; CI ใช้ Node 22)
 - เป้าหมายสำหรับทดสอบในเครื่อง: API ของคุณเองที่ `http://localhost:8080` (ค่าเริ่มต้น)
 
 ## ก่อน commit
