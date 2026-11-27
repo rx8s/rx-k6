@@ -210,9 +210,11 @@ const server = http.createServer(async (req, res) => {
 
   // --- API: สั่งรัน ---
   if (p === '/api/run' && req.method === 'POST') {
-    const body = await readBody(req);
+    let body = await readBody(req);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) body = {}; // null/[] ต้องไม่ทำให้ process ล่ม
     const { test, baseUrl, authToken, authorized } = body;
-    if (!TESTS[test]) return sendJSON(res, 400, { error: 'ชุดทดสอบไม่ถูกต้อง' });
+    // hasOwn: กัน key ของ prototype เช่น 'constructor' หลุด allowlist
+    if (typeof test !== 'string' || !Object.hasOwn(TESTS, test)) return sendJSON(res, 400, { error: 'ชุดทดสอบไม่ถูกต้อง' });
     if (!validUrl(baseUrl)) return sendJSON(res, 400, { error: 'BASE_URL ต้องเป็น http(s) ที่ถูกต้อง' });
     if (!authorized) return sendJSON(res, 400, { error: 'ต้องยืนยันว่าได้รับอนุญาตให้ทดสอบเป้าหมายนี้ก่อน' });
     const options = validateOptions(test, body.options);

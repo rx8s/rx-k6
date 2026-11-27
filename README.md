@@ -124,6 +124,7 @@ scripts/report_core.py  logic อ่าน/สรุปผล (Python) ★   | r
 scripts/make_report.py  รวมผล → executive-report.html (Python) ★ | make-report.js = Node
 scripts/run-all.sh      รันครบทุกชุด (มีขั้นยืนยันสิทธิ์)
 scripts/test_report_core.py  ทดสอบการนำเข้า SQLite
+scripts/test_server.py       ทดสอบ server.py (ความปลอดภัยของ API) โดยไม่รัน k6 จริง
 reports/                ผลลัพธ์: results.db (SQLite, ถาวร) + JSON จาก k6 + HTML
 ```
 ★ = ค่าเริ่มต้น (Python) · ไฟล์ `*.js` ฝั่งเครื่องมือเป็นเวอร์ชัน Node เดิมที่เก็บไว้

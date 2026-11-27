@@ -11,6 +11,7 @@ rx_k6 คือเฟรมเวิร์กทดสอบสมรรถน�
 ```bash
 python3 server.py                     # web app → http://127.0.0.1:4000 (หรือ ./run.sh)
 python3 scripts/test_report_core.py   # self-test ของ report_core (SQLite) — รันทุกครั้งที่แก้ไฟล์นี้
+python3 scripts/test_server.py        # เทสต์ server.py (Host/Origin, allowlist, พารามิเตอร์) — รันทุกครั้งที่แก้ server.py
 python3 scripts/report_core.py        # นำเข้า reports/*.json → reports/results.db เอง
 python3 scripts/make_report.py        # สร้าง reports/executive-report.html
 k6 run -e BASE_URL=http://localhost:8080 tests/smoke.js

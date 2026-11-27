@@ -20,6 +20,13 @@
 - พารามิเตอร์จากหน้าเว็บถูกตรวจชนิด/ช่วง + รับเฉพาะ key ที่กำหนดต่อชุด ก่อนส่งเป็น `-e` ให้ k6
 
 ### Fixed
+- `server.py` ตัด connection ทิ้งโดยไม่ตอบ เมื่อได้ค่าผิดชนิด เช่น `test` เป็น list,
+  body เป็น `[]` หรือพารามิเตอร์เป็น `inf`/`1e999` — ตอนนี้ตอบ 400 หรือทิ้งค่านั้นตามปกติ
+- คำตอบ 403/404 ของ `server.py` ไม่มี `Content-Length` ทำให้ client รอค้าง และ SSE
+  `/api/stream/` ไม่ปิด connection หลังรันจบ
+- `server.js` (เวอร์ชัน Node) ล่มทั้ง process เมื่อ POST `/api/run` ด้วย body `null`
+  และชื่อชุดอย่าง `constructor`/`toString` หลุด allowlist `TESTS` ได้ (ไม่ถึงขั้นรันคำสั่งอื่น
+  เพราะส่ง args เป็น list) — ตอนนี้ตอบ 400 ทั้งคู่
 - รัน `k6 run tests/<ชุด>.js` ตรงๆ โดยไม่ส่ง `-e TEST_TYPE` ถูกบันทึกเป็นชนิด `run`
   — ตอนนี้อ่าน `tags.test_type` ของไฟล์ test ได้ถูกต้อง
 - Security scan ฟ้องผิด: ตัด signature `49` และ `uid=` ที่ชนข้อมูลปกติ

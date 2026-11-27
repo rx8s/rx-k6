@@ -11,6 +11,7 @@
 
 ```bash
 python3 scripts/test_report_core.py                    # ต้องขึ้น "OK — report_core SQLite tests passed"
+python3 scripts/test_server.py                         # ต้องขึ้น "OK — server tests passed" (ไม่รัน k6 จริง)
 node --check web/app.js && node --check web/dashboard.js
 python3 server.py                                      # เปิด /dashboard ดูว่าไม่มี error ใน console
 ```

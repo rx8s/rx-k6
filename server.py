@@ -97,7 +97,7 @@ def validate_options(test, raw):
         if f["type"] == "int":
             try:
                 iv = int(float(v))
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, OverflowError):  # OverflowError = inf/1e999
                 continue
             if iv < f.get("min", 1) or iv > f.get("max", 10 ** 12):
                 continue
@@ -235,6 +235,11 @@ def origin_ok(origin):
     return x.scheme == "http" and x.netloc in _allowed_hosts()
 
 
+def _str(v):
+    """ค่าจาก JSON ที่ควรเป็นข้อความ — ชนิดอื่นถือเป็นค่าว่าง"""
+    return v.strip() if isinstance(v, str) else ""
+
+
 def read_config_default():
     default = "http://localhost:8080"
     try:
@@ -267,10 +272,7 @@ class Handler(BaseHTTPRequestHandler):
             with open(path, "rb") as fh:
                 body = fh.read()
         except OSError:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"not found")
-            return
+            return self._plain(404, b"not found")
         self.send_response(200)
         self.send_header("Content-Type", MIME.get(os.path.splitext(path)[1], "application/octet-stream"))
         self.send_header("Content-Length", str(len(body)))
@@ -280,11 +282,19 @@ class Handler(BaseHTTPRequestHandler):
     def _read_body(self):
         try:
             n = int(self.headers.get("Content-Length", 0))
-            if n > 1_000_000:
+            if n < 0 or n > 1_000_000:  # ค่าติดลบทำให้ read() รอจนกว่าจะปิด connection
                 return {}
-            return json.loads(self.rfile.read(n) or b"{}")
-        except (ValueError, json.JSONDecodeError):
+            body = json.loads(self.rfile.read(n) or b"{}")
+        except (ValueError, UnicodeDecodeError):  # JSONDecodeError เป็น subclass ของ ValueError
             return {}
+        return body if isinstance(body, dict) else {}  # [] / "x" / null ต้องไม่ทำให้ handler พัง
+
+    def _plain(self, code, text=b""):
+        # HTTP/1.1 keep-alive: ต้องมี Content-Length ไม่งั้น client รอค้างไม่รู้ว่าคำตอบจบเมื่อไร
+        self.send_response(code)
+        self.send_header("Content-Length", str(len(text)))
+        self.end_headers()
+        self.wfile.write(text)
 
     # ------------------------------------------------------------------ GET
     def _forbidden(self, msg):
@@ -303,7 +313,7 @@ class Handler(BaseHTTPRequestHandler):
             safe = os.path.normpath(p[len("/web/"):]).lstrip("/.")
             full = os.path.join(WEB, safe)
             if not os.path.abspath(full).startswith(WEB):
-                self.send_response(403); self.end_headers(); return
+                return self._plain(403)
             return self._file(full)
 
         if p == "/api/config":
@@ -319,7 +329,7 @@ class Handler(BaseHTTPRequestHandler):
         if p.startswith("/api/stream/"):
             return self._stream(p.rsplit("/", 1)[-1])
 
-        self.send_response(404); self.end_headers(); self.wfile.write(b"not found")
+        self._plain(404, b"not found")
 
     # ----------------------------------------------------------------- POST
     def do_POST(self):
@@ -337,25 +347,25 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/run":
             b = self._read_body()
             test = b.get("test")
-            base_url = (b.get("baseUrl") or "").strip()
-            if test not in TESTS:
+            base_url = _str(b.get("baseUrl"))
+            if not isinstance(test, str) or test not in TESTS:  # list/dict จะ unhashable
                 return self._json(400, {"error": "ชุดทดสอบไม่ถูกต้อง"})
             if not valid_url(base_url):
                 return self._json(400, {"error": "BASE_URL ต้องเป็น http(s) ที่ถูกต้อง"})
             if not b.get("authorized"):
                 return self._json(400, {"error": "ต้องยืนยันว่าได้รับอนุญาตให้ทดสอบเป้าหมายนี้ก่อน"})
             opts = validate_options(test, b.get("options") or {})
-            run_id = start_run(test, base_url, (b.get("authToken") or "").strip(), opts)
+            run_id = start_run(test, base_url, _str(b.get("authToken")), opts)
             return self._json(200, {"runId": run_id})
 
-        self.send_response(404); self.end_headers()
+        self._plain(404)
 
     # --------------------------------------------------------------- SSE
     def _stream(self, run_id):
         with _runs_lock:
             run = _runs.get(run_id)
         if not run:
-            self.send_response(404); self.end_headers(); return
+            return self._plain(404)
 
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
@@ -380,6 +390,7 @@ class Handler(BaseHTTPRequestHandler):
             pass
         finally:
             run.remove_listener(q)
+            self.close_connection = True  # คำตอบไม่มี Content-Length ต้องปิด connection เพื่อบอกว่าจบ
 
 
 def main():
