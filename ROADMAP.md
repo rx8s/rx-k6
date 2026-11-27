@@ -7,10 +7,10 @@
 
 ## ขั้นที่ 1 — ปิดงานค้าง
 
-- [x] **Merge PR #2** (`fix/review-followups`) — squash เป็น `76264ad`; เทสต์ทั้งหมดผ่านก่อน merge
+- [x] **Merge `fix/review-followups`** — แก้ช่องว่าง attribute ในแดชบอร์ด + เอกสาร Host/Origin guard; เทสต์ทั้งหมดผ่านก่อน merge
 - [x] **ลบ branch ที่ merge แล้ว** — `test/server-py` และ `fix/review-followups` (ในเครื่อง + GitHub)
-- [x] **ออกเวอร์ชันใน CHANGELOG** — `[Unreleased]` → `## 2026-11-27` (รวมรายการของ #2 แล้ว)
-- [x] **git tag** — ติด `2026-11-27` (annotated) ที่ `44c7b0f` ใช้ชื่อตามหัวข้อวันที่ใน CHANGELOG
+- [x] **ออกเวอร์ชันใน CHANGELOG** — `[Unreleased]` → `## 2026-11-27` (รวมรายการของ `fix/review-followups` แล้ว)
+- [x] **git tag** — ติด `2026-11-27` (annotated) ใช้ชื่อตามหัวข้อวันที่ใน CHANGELOG
 - [x] **แก้เวอร์ชัน Node ใน CONTRIBUTING.md** — เปลี่ยนเป็น Node 22+ ให้ตรงกับ CI
 
 ## ขั้นที่ 2 — เตรียมเปิด repo เป็น public
@@ -24,15 +24,12 @@
 
 ต้องตัดสินใจ / ทำก่อนเปิด:
 
-- [ ] **อีเมลส่วนตัวในประวัติ git** — 10 commit แรกบน master (`44c892a` … `c255c2f`)
-      ใช้อีเมลส่วนตัว เปิด public แล้วทุกคนเห็นผ่าน `git log`
-      (`refs/pull/*` ของ GitHub ลบเองไม่ได้ จึงแค่ rewrite + force-push ยังไม่หายสนิท) เลือกหนึ่งทาง:
-  - **A. (แนะนำ)** rewrite ประวัติให้ใช้อีเมล noreply แล้ว push ไป **repo ใหม่** ที่ว่าง
-    เก็บ repo เดิมเป็น private — หายสนิท แต่หน้า PR เดิมไม่ตามมา
-  - **B.** ยอมรับ — เปิด repo เดิมเป็น public ทั้งแบบนี้
-  - **C.** rewrite + force-push repo เดิม แล้วขอ GitHub Support ลบ PR refs
+- [x] **อีเมลส่วนตัวในประวัติ git** — เลือกทาง A: rewrite ทุก commit ให้ใช้อีเมล noreply ของ GitHub
+      แล้วย้ายมา repo ใหม่ `rx8s/rx-k6`; repo เดิม (`rx8s/rxk6tools`) เก็บเป็น private
+      ประวัติ PR เดิมไม่ได้ตามมา จึงตัดเลข PR ออกจากหัวข้อ commit และเอกสารแล้ว
 - [x] **เพิ่ม LICENSE** — เลือก MIT (`LICENSE`, อ้างอิงใน README และ `package.json`)
-- [ ] ถ้าเลือกทาง A: อัปเดตลิงก์ PR (#1, #3) ใน CHANGELOG/commit ที่ชี้ไป repo เดิม
+- [x] ตัดเลข PR ที่ชี้ไป repo เดิมออกจาก CHANGELOG / ROADMAP / หัวข้อ commit
+- [ ] **เปิด `rx8s/rx-k6` เป็น public** — ตรวจหน้า repo ก่อน (README, LICENSE, ประวัติ commit)
 
 ## ขั้นที่ 3 — คุณภาพโค้ด
 
@@ -45,7 +42,7 @@
 
 ## เสร็จแล้ว (2026-11-27)
 
-- [x] CI บน GitHub Actions — `py_compile`, self-test, `node --check`, `k6 inspect` (PR #3)
+- [x] CI บน GitHub Actions — `py_compile`, self-test, `node --check`, `k6 inspect`
 - [x] เทสต์ `server.py` 16 ข้อ รันใน CI + แก้บั๊ก request ผิดรูปแบบทำ handler พัง
-- [x] กัน CSRF / DNS rebinding ใน `/api/run` (PR #1)
+- [x] กัน CSRF / DNS rebinding ใน `/api/run`
 - [x] ลบ worktree และ branch เก่าที่ merge แล้ว
