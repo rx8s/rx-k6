@@ -10,8 +10,7 @@
 - [x] **Merge PR #2** (`fix/review-followups`) — squash เป็น `76264ad`; เทสต์ทั้งหมดผ่านก่อน merge
 - [x] **ลบ branch ที่ merge แล้ว** — `test/server-py` และ `fix/review-followups` (ในเครื่อง + GitHub)
 - [x] **ออกเวอร์ชันใน CHANGELOG** — `[Unreleased]` → `## 2026-11-27` (รวมรายการของ #2 แล้ว)
-- [ ] **git tag** — ยังไม่ติด: repo ยังไม่มีระบบเลขเวอร์ชัน ต้องเลือกก่อน
-      (เช่น `v0.1.0` แบบ semver หรือ `2026-11-27` ตามหัวข้อ CHANGELOG)
+- [x] **git tag** — ติด `2026-11-27` (annotated) ที่ `44c7b0f` ใช้ชื่อตามหัวข้อวันที่ใน CHANGELOG
 - [x] **แก้เวอร์ชัน Node ใน CONTRIBUTING.md** — เปลี่ยนเป็น Node 22+ ให้ตรงกับ CI
 
 ## ขั้นที่ 2 — เตรียมเปิด repo เป็น public
