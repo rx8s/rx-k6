@@ -29,7 +29,7 @@
       ประวัติ PR เดิมไม่ได้ตามมา จึงตัดเลข PR ออกจากหัวข้อ commit และเอกสารแล้ว
 - [x] **เพิ่ม LICENSE** — เลือก MIT (`LICENSE`, อ้างอิงใน README และ `package.json`)
 - [x] ตัดเลข PR ที่ชี้ไป repo เดิมออกจาก CHANGELOG / ROADMAP / หัวข้อ commit
-- [ ] **เปิด `rx8s/rx-k6` เป็น public** — ตรวจหน้า repo ก่อน (README, LICENSE, ประวัติ commit)
+- [x] **เปิด `rx8s/rx-k6` เป็น public** — เปิดแล้ว 2026-11-27 พร้อมคำอธิบาย repo ใหม่
 
 ## ขั้นที่ 3 — คุณภาพโค้ด
 
