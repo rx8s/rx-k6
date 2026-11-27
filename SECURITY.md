@@ -21,8 +21,8 @@ rx_k6 สร้างโหลดและส่ง payload ตรวจจั�
 | กลไก | อยู่ที่ |
 |------|---------|
 | BASE_URL ค่าเริ่มต้นเป็น `http://localhost:8080` กันยิงระบบอื่นโดยไม่ตั้งใจ | `config/config.js` |
-| web app ผูกกับ `127.0.0.1` เท่านั้น เปิดจากเครื่องอื่นไม่ได้ | `server.py`, `server.js` |
-| กันเว็บอื่นสั่งรันผ่านเบราว์เซอร์ (CSRF / DNS rebinding): ตรวจ `Host` ทุกคำขอ, ปฏิเสธ `Origin` จากเว็บอื่น (403), POST ต้องเป็น `application/json` (415) | `server.py`, `server.js` |
+| web app ผูกกับ `127.0.0.1` เท่านั้น เปิดจากเครื่องอื่นไม่ได้ | `server.py` |
+| กันเว็บอื่นสั่งรันผ่านเบราว์เซอร์ (CSRF / DNS rebinding): ตรวจ `Host` ทุกคำขอ, ปฏิเสธ `Origin` จากเว็บอื่น (403), POST ต้องเป็น `application/json` (415) | `server.py` |
 | ต้องติ๊กยืนยันสิทธิ์ทุกครั้งก่อนรัน (ฝั่ง server ตรวจซ้ำ) | `/api/run` |
 | รันได้เฉพาะชุดใน allowlist, URL ต้องเป็น http(s), ระยะเวลา soak ตรวจรูปแบบ | `server.py` |
 | `run-all.sh` ต้องพิมพ์ `yes` ยืนยันก่อน | `scripts/run-all.sh` |

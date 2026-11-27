@@ -189,6 +189,11 @@ def metrics(data):
     }
 
 
+def _ms(v):
+    """แสดงเวลาเป็น ms — ไม่มีค่า (เช่น ไม่มี request สำเร็จ) แสดงเป็น "—" แทนคำว่า Nonems"""
+    return "—" if v is None else f"{v}ms"
+
+
 def verdict(test_type, mx):
     """ตัดสิน verdict (green/yellow/red) + ข้อความ"""
     if test_type == "security":
@@ -217,8 +222,8 @@ def verdict(test_type, mx):
         if mx["thrOk"]:
             return ["green", f"รับโหลดได้ตลอดช่วง ไต่ถึง ~{mx['maxVus']} VUs โดยไม่พัง — เพิ่ม maxRate เพื่อหาเพดานต่อ"]
         if mx["bizErrors"] > 0:
-            return ["red", f"พบจุดพังที่ ~{mx['maxVus']} VUs — ระบบเริ่มตอบ error จริง {mx['bizErrors']} ครั้ง (p95 {mx['p95']}ms)"]
-        return ["yellow", f"พบเพดานที่ ~{mx['maxVus']} VUs — ชะลอจน p95 {mx['p95']}ms (ยังไม่ crash)"]
+            return ["red", f"พบจุดพังที่ ~{mx['maxVus']} VUs — ระบบเริ่มตอบ error จริง {mx['bizErrors']} ครั้ง (p95 {_ms(mx['p95'])})"]
+        return ["yellow", f"พบเพดานที่ ~{mx['maxVus']} VUs — ชะลอจน p95 {_ms(mx['p95'])} (ยังไม่ crash)"]
     if test_type == "defense":
         if mx["bizErrors"] > 0:
             return ["red", f"เกราะไม่ไหว: ระบบตอบ 5xx/timeout {mx['bizErrors']} ครั้งภายใต้โหลดหนัก"]
@@ -228,8 +233,8 @@ def verdict(test_type, mx):
     if mx["failRate"] >= 5:
         return ["red", f"error rate สูง {mx['failRate']}%"]
     if (not mx["thrOk"]) or mx["failRate"] >= 1:
-        return ["yellow", f"ใกล้เกิน SLA (error {mx['failRate']}%, p95 {mx['p95']}ms)"]
-    return ["green", f"ผ่าน SLA (error {mx['failRate']}%, p95 {mx['p95']}ms)"]
+        return ["yellow", f"ใกล้เกิน SLA (error {mx['failRate']}%, p95 {_ms(mx['p95'])})"]
+    return ["green", f"ผ่าน SLA (error {mx['failRate']}%, p95 {_ms(mx['p95'])})"]
 
 
 def aggregate(reports_dir=None, db_path=None):

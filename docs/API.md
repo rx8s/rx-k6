@@ -1,6 +1,6 @@
 # HTTP API ของ web app
 
-เซิร์ฟเวอร์ (`server.py` หรือ `server.js`) เปิดที่ `http://127.0.0.1:4000` (เปลี่ยนได้ด้วย `PORT`)
+เซิร์ฟเวอร์ (`server.py`) เปิดที่ `http://127.0.0.1:4000` (เปลี่ยนได้ด้วย `PORT`)
 ผูกกับ localhost เท่านั้น ไม่มีระบบล็อกอิน ทุก response เป็น JSON แบบ UTF-8 เว้นแต่ระบุไว้
 
 | Method | Path | ใช้ทำอะไร |
@@ -131,9 +131,6 @@ data: {"type": "done", "exitCode": 0}
 ```
 ใหม่สุดก่อน ไม่เกิน 200 รายการ
 
-> **เวอร์ชัน Node (`server.js`)** อ่านจากไฟล์ JSON: แต่ละ item มีแค่ `file`, `type`, `ranAt`
-> (เป็น epoch ms) และ `metrics` — ไม่มี `label`, `baseUrl`, `color`, `verdict`
-
 ---
 
 ## Object `metrics`
@@ -168,4 +165,4 @@ data: {"type": "done", "exitCode": 0}
 > ชุด `payload` ตอบ 413 เยอะทำให้ k6 `failRate` สูง แต่ไม่ใช่ความล้มเหลว — แดชบอร์ดจึงไม่โชว์ error rate
 
 `worst` ใน `/api/dashboard` คือสีที่แย่ที่สุดในบรรดาผลล่าสุด
-ตรรกะอยู่ที่ `verdict()` ใน `scripts/report_core.py` (และ `report-core.js`)
+ตรรกะอยู่ที่ `verdict()` ใน `scripts/report_core.py`

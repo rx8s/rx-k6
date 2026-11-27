@@ -16,8 +16,8 @@
     "fuzz": "k6 run -e TEST_TYPE=fuzz tests/fuzz.js",
     "payload": "k6 run -e TEST_TYPE=payload tests/payload.js",
     "defense": "k6 run -e TEST_TYPE=defense tests/defense.js",
-    "report": "node scripts/make-report.js",
+    "report": "python3 scripts/make_report.py",
     "all": "bash scripts/run-all.sh",
-    "web": "node server.js"
+    "web": "python3 server.py"
   }
 }

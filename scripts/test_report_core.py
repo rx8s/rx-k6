@@ -73,6 +73,9 @@ assert rc.verdict("breakpoint", mx(thrOk=False, maxVus=400, bizErrors=0, p95=210
 assert rc.verdict("defense", mx(rateLimited=5000))[0] == "green"
 assert rc.verdict("defense", mx(bizErrors=12))[0] == "red"
 assert rc.verdict("defense", mx(rateLimited=0, bizErrors=0, rps=1000))[0] == "yellow"
+# ไม่มี latency (p95 = None) → ข้อความต้องไม่มี "None"
+assert "None" not in rc.verdict("load", mx(p95=None))[1]
+assert rc.verdict("load", mx(p95=None))[1].endswith("p95 —)")
 # metrics() อ่าน counter ใหม่ได้
 _m = rc.metrics({"metrics": {"rate_limited": {"values": {"count": 7}},
                              "oversize_rejected": {"values": {"count": 2}}}})
