@@ -5,6 +5,10 @@
 ## [Unreleased]
 
 ### Added
+- CI บน GitHub Actions (`.github/workflows/ci.yml`) รันทุก PR: `py_compile`, `test_report_core.py`,
+  `test_server.py`, `node --check` ทุกไฟล์ JS และ `k6 inspect` ทุกชุดทดสอบ (ไม่ยิง request จริง)
+- เทสต์ `scripts/test_server.py` สำหรับ `server.py` — ตรวจ Host/Origin, allowlist, พารามิเตอร์,
+  การปิดบัง token และ path traversal โดยไม่รัน k6 จริง
 - **ปรับพารามิเตอร์ต่อการรันได้จากหน้าควบคุม** — แต่ละชุดทดสอบมีช่องกรอกของตัวเอง
   (VUs, ระยะเวลา, อัตรา req/s, ขนาด body ฯลฯ) หน้าเว็บสร้างช่องจาก `/api/config` อัตโนมัติ
   เว้นว่าง = ใช้ค่าเริ่มต้นใน `config/config.js`; ไฟล์ test อ่าน override ผ่าน `envInt`/`envStr`

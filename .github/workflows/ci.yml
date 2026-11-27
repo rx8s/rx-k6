@@ -32,6 +32,9 @@ jobs:
       - name: Python — self-test report_core (SQLite)
         run: python3 scripts/test_report_core.py
 
+      - name: Python — เทสต์ server.py (ไม่รัน k6 จริง)
+        run: timeout 120 python3 scripts/test_server.py
+
       - name: JS — เช็ก syntax (web, server.js, scripts, lib, config, tests)
         run: |
           for f in web/*.js server.js scripts/*.js lib/*.js config/*.js tests/*.js; do

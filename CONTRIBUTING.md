@@ -17,7 +17,7 @@ python3 server.py                                      # เปิด /dashboard
 ```
 
 ทุก PR จะรัน CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) อัตโนมัติ: `py_compile`,
-`test_report_core.py`, `node --check` ทุกไฟล์ JS และ `k6 inspect` ทุกชุดทดสอบ
+`test_report_core.py`, `test_server.py`, `node --check` ทุกไฟล์ JS และ `k6 inspect` ทุกชุดทดสอบ
 (ไม่ยิง request ใส่เป้าหมายใดๆ)
 
 - คอมเมนต์และข้อความ UI เป็นภาษาไทย ชื่อตัวแปรเป็นอังกฤษ
