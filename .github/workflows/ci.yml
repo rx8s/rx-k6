@@ -1,0 +1,46 @@
+# ตรวจพื้นฐานทุก PR และทุก push เข้า master — ไม่ยิงโหลดใส่เป้าหมายใดๆ
+# (k6 inspect แค่ประเมิน options ของสคริปต์ ไม่ส่ง request)
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - uses: grafana/setup-k6-action@v1
+
+      - name: Python — compile ทุกไฟล์
+        run: python3 -m py_compile server.py scripts/*.py
+
+      - name: Python — self-test report_core (SQLite)
+        run: python3 scripts/test_report_core.py
+
+      - name: JS — เช็ก syntax (web, server.js, scripts, lib, config, tests)
+        run: |
+          for f in web/*.js server.js scripts/*.js lib/*.js config/*.js tests/*.js; do
+            node --check "$f"
+          done
+
+      - name: k6 — ตรวจ options ของทุกชุดทดสอบ
+        run: |
+          for f in tests/*.js; do
+            echo "== $f"
+            k6 inspect "$f" > /dev/null
+          done

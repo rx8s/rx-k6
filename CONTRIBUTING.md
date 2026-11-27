@@ -15,6 +15,10 @@ node --check web/app.js && node --check web/dashboard.js
 python3 server.py                                      # เปิด /dashboard ดูว่าไม่มี error ใน console
 ```
 
+ทุก PR จะรัน CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) อัตโนมัติ: `py_compile`,
+`test_report_core.py`, `node --check` ทุกไฟล์ JS และ `k6 inspect` ทุกชุดทดสอบ
+(ไม่ยิง request ใส่เป้าหมายใดๆ)
+
 - คอมเมนต์และข้อความ UI เป็นภาษาไทย ชื่อตัวแปรเป็นอังกฤษ
 - commit message: หัวข้อภาษาอังกฤษสั้นๆ แบบ imperative, เนื้อหาอธิบายเป็นภาษาไทยได้
 - บันทึกการเปลี่ยนแปลงที่ผู้ใช้เห็นลง [CHANGELOG.md](CHANGELOG.md) หัวข้อ `[Unreleased]`
