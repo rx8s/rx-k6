@@ -29,7 +29,8 @@ function looksVulnerable(res, payload) {
   // 1) error/ข้อมูลภายในรั่วออกมาใน body
   const body = (res.body || '').toString();
   for (const sig of LEAK_SIGNATURES) {
-    if (body.includes(sig)) return { vuln: true, reason: `พบ signature รั่ว: "${sig}"` };
+    const hit = sig instanceof RegExp ? sig.test(body) : body.includes(sig);
+    if (hit) return { vuln: true, reason: `พบ signature รั่ว: "${sig}"` };
   }
   // 2) payload สะท้อนกลับมาแบบไม่ถูก encode (เสี่ยง XSS)
   if (payload.includes('<script>') && body.includes('<script>')) {

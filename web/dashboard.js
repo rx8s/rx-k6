@@ -153,8 +153,8 @@ async function load() {
       : `<span><b>${n(m.p95)}</b>p95 ms</span><span><b>${n(dispFail(t))}%</b>error</span><span><b>${m.maxVus}</b>VUs</span>`;
     const d = document.createElement('div');
     d.className = 'card ' + t.color;
-    d.innerHTML = `<div class="top"><div class="h">${t.label}</div><span class="badge ${t.color}">${badgeText[t.color]}</span></div>
-      <div class="msg">${t.verdict}</div><div class="mini">${mini}</div>`;
+    d.innerHTML = `<div class="top"><div class="h">${esc(t.label)}</div><span class="badge ${esc(t.color)}">${badgeText[t.color]}</span></div>
+      <div class="msg">${esc(t.verdict)}</div><div class="mini">${mini}</div>`;
     cards.appendChild(d);
   }
 
@@ -168,7 +168,7 @@ async function load() {
       : (m.checkRate != null ? m.checkRate + '%' : '—');
     const err = isScan(t) ? '<span class="na">—</span>' : `${n(dispFail(t))}%`;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><b>${t.label}</b></td><td class="dot ${t.color}" aria-label="${badgeText[t.color]}"></td>
+    tr.innerHTML = `<td><b>${esc(t.label)}</b></td><td class="dot ${esc(t.color)}"aria-label="${badgeText[t.color]}"></td>
       <td class="num">${m.totalReqs.toLocaleString()}</td><td class="num">${n(m.rps)}</td>
       <td class="num">${n(m.avg)}</td><td class="num">${n(m.p95)}</td><td class="num">${n(m.p99)}</td><td class="num">${n(m.max)}</td>
       <td class="num">${err}</td><td class="num">${m.maxVus}</td><td class="num">${last}</td>
@@ -223,7 +223,7 @@ function renderHistory() {
       : (m.checkRate != null ? m.checkRate + '%' : '—');
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${fmtTime(x.ranAt)}</td><td><b>${esc(x.label || x.type)}</b></td>
-      <td class="dot ${x.color || ''}" aria-label="${badgeText[x.color] || ''}" title="${esc(x.verdict)}"></td>
+      <td class="dot ${esc(x.color)}" aria-label="${badgeText[x.color] || ''}" title="${esc(x.verdict)}"></td>
       <td class="url" title="${esc(x.baseUrl)}">${esc(x.baseUrl) || '<span class="na">—</span>'}</td>
       <td class="num">${(m.totalReqs || 0).toLocaleString()}</td>
       <td class="num">${scan ? '<span class="na">—</span>' : n(m.p95)}</td><td class="num">${scan ? '<span class="na">—</span>' : n(m.p99)}</td>

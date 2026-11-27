@@ -215,6 +215,26 @@ def start_run(test, base_url, auth_token="", extra_env=None):
     return run_id
 
 
+def _allowed_hosts():
+    """Host/Origin ที่ยอมรับ — กัน DNS rebinding และเว็บอื่นสั่งรันข้ามโดเมน (CSRF)"""
+    hosts = {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}
+    if PORT == 80:
+        hosts |= {"127.0.0.1", "localhost"}
+    return hosts
+
+
+def host_ok(host):
+    return (host or "").strip().lower() in _allowed_hosts()
+
+
+def origin_ok(origin):
+    """ไม่มี Origin (เช่น curl) = ผ่าน; มี Origin ต้องเป็นหน้าเว็บของ server นี้เท่านั้น"""
+    if not origin:
+        return True
+    x = urlparse(origin.strip().lower())
+    return x.scheme == "http" and x.netloc in _allowed_hosts()
+
+
 def read_config_default():
     default = "http://localhost:8080"
     try:
@@ -267,7 +287,12 @@ class Handler(BaseHTTPRequestHandler):
             return {}
 
     # ------------------------------------------------------------------ GET
+    def _forbidden(self, msg):
+        return self._json(403, {"error": msg})
+
     def do_GET(self):
+        if not host_ok(self.headers.get("Host")):
+            return self._forbidden("Host ไม่ถูกต้อง — เปิดผ่าน http://127.0.0.1:%d เท่านั้น" % PORT)
         p = urlparse(self.path).path
 
         if p in ("/", "/index.html"):
@@ -298,6 +323,16 @@ class Handler(BaseHTTPRequestHandler):
 
     # ----------------------------------------------------------------- POST
     def do_POST(self):
+        # กันเว็บอื่นสั่งรัน k6 ผ่านเบราว์เซอร์ของผู้ใช้ (CSRF / DNS rebinding):
+        #   Host ต้องเป็น server นี้, Origin (ถ้ามี) ต้องเป็นหน้าเว็บนี้, และต้องเป็น JSON
+        #   (application/json บังคับให้เบราว์เซอร์ทำ CORS preflight ซึ่ง server ไม่อนุญาต)
+        if not host_ok(self.headers.get("Host")):
+            return self._forbidden("Host ไม่ถูกต้อง")
+        if not origin_ok(self.headers.get("Origin")):
+            return self._forbidden("ไม่อนุญาตคำขอจากเว็บอื่น")
+        ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        if ctype != "application/json":
+            return self._json(415, {"error": "ต้องส่งเป็น application/json"})
         p = urlparse(self.path).path
         if p == "/api/run":
             b = self._read_body()

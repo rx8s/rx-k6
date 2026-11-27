@@ -162,9 +162,29 @@ function finish(state, code) {
 }
 
 // ---------------------------------------------------------------------------
+// กันเว็บอื่นสั่งรัน k6 ผ่านเบราว์เซอร์ของผู้ใช้ (CSRF / DNS rebinding)
+//   Host ต้องเป็น server นี้, Origin (ถ้ามี) ต้องเป็นหน้าเว็บนี้ — ตรงกับ server.py
+// ---------------------------------------------------------------------------
+const ALLOWED_HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`,
+  ...(PORT === 80 ? ['127.0.0.1', 'localhost'] : [])]);
+const hostOk = (h) => ALLOWED_HOSTS.has(String(h || '').trim().toLowerCase());
+function originOk(origin) {
+  if (!origin) return true; // ไม่มี Origin (เช่น curl) = ผ่าน
+  try { const x = new URL(String(origin).trim().toLowerCase()); return x.protocol === 'http:' && ALLOWED_HOSTS.has(x.host); }
+  catch { return false; }
+}
+
+// ---------------------------------------------------------------------------
 // routes
 // ---------------------------------------------------------------------------
 const server = http.createServer(async (req, res) => {
+  if (!hostOk(req.headers.host)) return sendJSON(res, 403, { error: `Host ไม่ถูกต้อง — เปิดผ่าน http://${HOST}:${PORT} เท่านั้น` });
+  if (req.method === 'POST') {
+    if (!originOk(req.headers.origin)) return sendJSON(res, 403, { error: 'ไม่อนุญาตคำขอจากเว็บอื่น' });
+    // application/json บังคับให้เบราว์เซอร์ทำ CORS preflight ซึ่ง server ไม่อนุญาต
+    const ctype = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+    if (ctype !== 'application/json') return sendJSON(res, 415, { error: 'ต้องส่งเป็น application/json' });
+  }
   const u = new URL(req.url, `http://${HOST}:${PORT}`);
   const p = u.pathname;
 
@@ -173,7 +193,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/dashboard' || p === '/dashboard.html') return sendFile(res, path.join(WEB, 'dashboard.html'), MIME['.html']);
   if (p.startsWith('/web/')) {
     const f = path.join(WEB, p.slice(5));
-    if (!f.startsWith(WEB)) { res.writeHead(403); return res.end(); }
+    if (!f.startsWith(WEB + path.sep)) { res.writeHead(403); return res.end(); }
     return sendFile(res, f, MIME[path.extname(f)] || 'application/octet-stream');
   }
 
