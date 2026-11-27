@@ -178,7 +178,7 @@ function originOk(origin) {
 // routes
 // ---------------------------------------------------------------------------
 const server = http.createServer(async (req, res) => {
-  if (!hostOk(req.headers.host)) return sendJSON(res, 403, { error: `Host ไม่ถูกต้อง — เปิดผ่าน http://${HOST}:${PORT} เท่านั้น` });
+  if (!hostOk(req.headers.host)) return sendJSON(res, 403, { error: `Host ไม่ถูกต้อง — เปิดผ่าน http://127.0.0.1:${PORT} หรือ http://localhost:${PORT} เท่านั้น` });
   if (req.method === 'POST') {
     if (!originOk(req.headers.origin)) return sendJSON(res, 403, { error: 'ไม่อนุญาตคำขอจากเว็บอื่น' });
     // application/json บังคับให้เบราว์เซอร์ทำ CORS preflight ซึ่ง server ไม่อนุญาต

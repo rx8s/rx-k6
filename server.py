@@ -302,7 +302,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if not host_ok(self.headers.get("Host")):
-            return self._forbidden("Host ไม่ถูกต้อง — เปิดผ่าน http://127.0.0.1:%d เท่านั้น" % PORT)
+            return self._forbidden("Host ไม่ถูกต้อง — เปิดผ่าน http://127.0.0.1:%d หรือ http://localhost:%d เท่านั้น" % (PORT, PORT))
         p = urlparse(self.path).path
 
         if p in ("/", "/index.html"):

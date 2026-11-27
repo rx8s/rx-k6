@@ -168,7 +168,7 @@ async function load() {
       : (m.checkRate != null ? m.checkRate + '%' : '—');
     const err = isScan(t) ? '<span class="na">—</span>' : `${n(dispFail(t))}%`;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><b>${esc(t.label)}</b></td><td class="dot ${esc(t.color)}"aria-label="${badgeText[t.color]}"></td>
+    tr.innerHTML = `<td><b>${esc(t.label)}</b></td><td class="dot ${esc(t.color)}" aria-label="${badgeText[t.color]}"></td>
       <td class="num">${m.totalReqs.toLocaleString()}</td><td class="num">${n(m.rps)}</td>
       <td class="num">${n(m.avg)}</td><td class="num">${n(m.p95)}</td><td class="num">${n(m.p99)}</td><td class="num">${n(m.max)}</td>
       <td class="num">${err}</td><td class="num">${m.maxVus}</td><td class="num">${last}</td>

@@ -13,6 +13,21 @@
 | GET | `/api/dashboard` | ผลล่าสุดของแต่ละชุด + สถานะรวม |
 | GET | `/api/history` | ประวัติการรันทั้งหมด (ใหม่สุดก่อน) |
 
+### การกันคำขอจากเว็บอื่น (ทุก endpoint)
+
+กันเว็บอื่นสั่งรัน k6 ผ่านเบราว์เซอร์ของผู้ใช้ (CSRF / DNS rebinding):
+
+- **ทุกคำขอ** — header `Host` ต้องเป็น `127.0.0.1:<PORT>` หรือ `localhost:<PORT>` ไม่งั้นได้ `403`
+- **POST** — ถ้ามี header `Origin` ต้องเป็น `http://127.0.0.1:<PORT>` หรือ `http://localhost:<PORT>`
+  ไม่งั้นได้ `403` (ไม่มี `Origin` เช่น curl = ผ่าน)
+- **POST** — `Content-Type` ต้องเป็น `application/json` ไม่งั้นได้ `415`
+
+```bash
+curl -X POST http://127.0.0.1:4000/api/run \
+  -H 'Content-Type: application/json' \
+  -d '{"test":"smoke","baseUrl":"http://localhost:8080","authorized":true}'
+```
+
 ---
 
 ## GET `/api/config`
@@ -53,6 +68,8 @@ Request body:
 Response:
 - `200` → `{ "runId": "<uuid>" }`
 - `400` → `{ "error": "<ข้อความภาษาไทย>" }` เมื่อชุดทดสอบไม่ถูกต้อง, URL ผิด หรือไม่ได้ยืนยันสิทธิ์
+- `403` → `Host` หรือ `Origin` ไม่ใช่ server นี้ (ดู "การกันคำขอจากเว็บอื่น")
+- `415` → ไม่ได้ส่ง `Content-Type: application/json`
 
 การรันทำงานเบื้องหลัง เมื่อ k6 จบ server จะนำผลเข้า `reports/results.db` ทันที
 
