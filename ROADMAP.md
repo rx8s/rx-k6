@@ -33,12 +33,9 @@
 
 ## ขั้นที่ 3 — คุณภาพโค้ด
 
-- [ ] **ตัดสินใจเรื่องเวอร์ชัน Node** (`server.js`, `scripts/report-core.js`, `scripts/make-report.js`)
-      ต้องแก้ตามเวอร์ชัน Python ทุกครั้ง, ไม่มีเทสต์, และเคยมีบั๊กเฉพาะตัว
-      (body `null` ทำ process ล่ม — แก้แล้ว) ทางเลือก:
-  - ลบทิ้ง ใช้ Python อย่างเดียว (เว็บ `web/` ใช้ต่อได้เลย) — แก้ CLAUDE.md, README, `package.json` ตาม
-  - เก็บไว้ แต่เพิ่มเทสต์แบบเดียวกับ `scripts/test_server.py` และรันใน CI
-- [ ] เพิ่มเทสต์ให้ `scripts/make_report.py` (ตอนนี้ CI ตรวจแค่ว่า compile ผ่าน)
+- [x] **เวอร์ชัน Node** — ลบทิ้ง ใช้ Python อย่างเดียว (`npm run web` / `npm run report` เรียก Python แทน)
+- [x] **เทสต์ `scripts/make_report.py`** — `scripts/test_make_report.py` รันใน CI
+      (เจอและแก้บั๊กข้อความ `p95 Nonems` ใน `verdict()` ระหว่างเขียนเทสต์)
 
 ## เสร็จแล้ว (2026-11-27)
 

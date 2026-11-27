@@ -6,6 +6,14 @@
 
 ### Added
 - `LICENSE` — เผยแพร่ภายใต้ MIT License (อ้างอิงใน README และ `package.json`)
+- เทสต์ `scripts/test_make_report.py` สำหรับรายงานผู้บริหาร รันใน CI
+
+### Removed
+- เวอร์ชัน Node (`server.js`, `scripts/report-core.js`, `scripts/make-report.js`) — ใช้ Python อย่างเดียว
+  `npm run web` / `npm run report` ยังใช้ได้ โดยเรียก `server.py` / `make_report.py` แทน
+
+### Fixed
+- ข้อความผลการทดสอบขึ้น `p95 Nonems` เมื่อการรันไม่มีข้อมูล latency — ตอนนี้แสดง `p95 —`
 
 ## 2026-11-27
 

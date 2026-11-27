@@ -35,9 +35,12 @@ jobs:
       - name: Python — เทสต์ server.py (ไม่รัน k6 จริง)
         run: timeout 120 python3 scripts/test_server.py
 
-      - name: JS — เช็ก syntax (web, server.js, scripts, lib, config, tests)
+      - name: Python — เทสต์ make_report.py (รายงานผู้บริหาร)
+        run: python3 scripts/test_make_report.py
+
+      - name: JS — เช็ก syntax (web, lib, config, tests)
         run: |
-          for f in web/*.js server.js scripts/*.js lib/*.js config/*.js tests/*.js; do
+          for f in web/*.js lib/*.js config/*.js tests/*.js; do
             node --check "$f"
           done
 

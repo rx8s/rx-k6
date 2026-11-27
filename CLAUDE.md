@@ -12,6 +12,7 @@ rx_k6 คือเฟรมเวิร์กทดสอบสมรรถน�
 python3 server.py                     # web app → http://127.0.0.1:4000 (หรือ ./run.sh)
 python3 scripts/test_report_core.py   # self-test ของ report_core (SQLite) — รันทุกครั้งที่แก้ไฟล์นี้
 python3 scripts/test_server.py        # เทสต์ server.py (Host/Origin, allowlist, พารามิเตอร์) — รันทุกครั้งที่แก้ server.py
+python3 scripts/test_make_report.py   # เทสต์รายงานผู้บริหาร — รันทุกครั้งที่แก้ make_report.py
 python3 scripts/report_core.py        # นำเข้า reports/*.json → reports/results.db เอง
 python3 scripts/make_report.py        # สร้าง reports/executive-report.html
 k6 run -e BASE_URL=http://localhost:8080 tests/smoke.js
@@ -35,10 +36,8 @@ web UI (web/*.html, *.js) ──HTTP/SSE──▶ server.py ──subprocess─�
                   aggregate() → /api/dashboard     history() → /api/history
 ```
 
-- **Python คือเวอร์ชันหลัก** (`server.py`, `scripts/report_core.py`, `scripts/make_report.py`)
-- เวอร์ชัน Node (`server.js`, `scripts/report-core.js`, `scripts/make-report.js`) เป็นของเดิมที่เก็บไว้
-  ยังอ่าน JSON โดยตรง ไม่ใช้ DB — หน้าเว็บ `web/` ใช้ร่วมกันทั้งสองเวอร์ชัน
-  จึงต้องรับมือกับ field ที่เวอร์ชัน Node ไม่ส่งมา (เช่น `color`, `label`, `baseUrl` ใน history)
+- ฝั่ง server/รายงานเป็น Python ล้วน (`server.py`, `scripts/report_core.py`, `scripts/make_report.py`)
+  ไฟล์ JavaScript มีแค่หน้าเว็บ (`web/`) และชุดทดสอบ k6 (`tests/`, `lib/`, `config/`)
 - รายละเอียด API: [docs/API.md](docs/API.md) · ฐานข้อมูล: [docs/DATABASE.md](docs/DATABASE.md)
 
 ## ข้อตกลงในโค้ด

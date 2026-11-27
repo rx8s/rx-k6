@@ -30,16 +30,12 @@
 
 เปิดหน้าเว็บสำหรับตั้งค่า + สั่งรันทดสอบ (ดูผลสด) และแดชบอร์ดรายงานแยกหน้า
 
-**เวอร์ชัน Python** (ค่าเริ่มต้น — ใช้ stdlib ล้วน ไม่ต้อง pip install):
+ใช้ Python stdlib ล้วน ไม่ต้อง pip install:
 ```bash
-python3 server.py        # หรือ  ./run.sh
-```
-**เวอร์ชัน Node** (ทางเลือก ยังเก็บไว้ ใช้ได้เหมือนกัน):
-```bash
-npm run web              # node server.js
+python3 server.py        # หรือ  ./run.sh  /  npm run web
 ```
 
-ทั้งสองเปิดที่ **http://127.0.0.1:4000** หน้าเว็บ (`web/`) และ API ชุดเดียวกัน
+เปิดที่ **http://127.0.0.1:4000**
 - หน้า **ควบคุม** (`/`) — ตั้ง BASE_URL, เลือกชุดทดสอบ, **ปรับพารามิเตอร์ของชุดนั้น** (VUs, ระยะเวลา, อัตรา req/s, ขนาด body ฯลฯ — เว้นว่างใช้ค่าเริ่มต้นใน `config/config.js`), ติ๊กยืนยันสิทธิ์, กดรัน แล้วดู log สดๆ
 - หน้า **แดชบอร์ด** (`/dashboard`) — KPI รวม, การ์ดรายด้าน (เขียว/เหลือง/แดง), กราฟ latency & error, ตารางละเอียด, ปุ่มพิมพ์เป็น PDF
   + **ประวัติการรันทั้งหมดจาก SQLite** — กราฟแนวโน้ม p95/p99 ตามเวลา และตารางทุกการรัน (กรองตามชุดทดสอบได้)
@@ -50,7 +46,7 @@ npm run web              # node server.js
 
 ### สร้างรายงาน static (ไม่ต้องเปิด server)
 ```bash
-python3 scripts/make_report.py     # หรือ  node scripts/make-report.js
+python3 scripts/make_report.py     # หรือ  npm run report
 open reports/executive-report.html
 ```
 
@@ -64,7 +60,6 @@ open reports/executive-report.html
 ```bash
 sqlite3 reports/results.db "SELECT ran_at, p95_ms, fail_rate FROM runs WHERE test_type='load' ORDER BY ran_at"
 ```
-> เวอร์ชัน Node (`server.js`, `make-report.js`) ยังอ่านจากไฟล์ JSON โดยตรง ไม่ได้ใช้ DB
 > รายละเอียด schema, query ตัวอย่าง, การสำรอง/ลบข้อมูลเก่า: [docs/DATABASE.md](docs/DATABASE.md)
 
 ---
@@ -110,9 +105,8 @@ BASE_URL=... AUTH_TOKEN=<token> npm run load
 
 ## โครงสร้าง
 ```
-server.py               web app (Python stdlib) — API + ตัวรัน k6 + สตรีมผลสด ★ ค่าเริ่มต้น
+server.py               web app (Python stdlib) — API + ตัวรัน k6 + สตรีมผลสด
 run.sh                  เปิด server.py อย่างสะดวก
-server.js               web app (Node) — เวอร์ชันเดิม ยังใช้ได้ (npm run web)
 web/                    หน้าเว็บ: index.html (ควบคุม), dashboard.html, *.js, styles.css
 config/config.js        ค่ากลาง: BASE_URL, thresholds, profiles, endpoints
 lib/helpers.js          ฟังก์ชันร่วม + metric ที่กำหนดเอง (k6)
@@ -120,14 +114,14 @@ lib/payloads.js         payload ความปลอดภัย + ค่าส
 lib/summary.js          บันทึกผลลง reports/ (ใช้ร่วมทุก test) (k6)
 scenarios/endpoints.json นิยาม endpoint + field ที่จะทดสอบ inject
 tests/*.js              ชุดทดสอบทั้ง 11 (k6 — JavaScript)
-scripts/report_core.py  logic อ่าน/สรุปผล (Python) ★   | report-core.js = เวอร์ชัน Node
-scripts/make_report.py  รวมผล → executive-report.html (Python) ★ | make-report.js = Node
+scripts/report_core.py  logic อ่าน/สรุปผล + นำเข้า SQLite
+scripts/make_report.py  รวมผล → executive-report.html
 scripts/run-all.sh      รันครบทุกชุด (มีขั้นยืนยันสิทธิ์)
 scripts/test_report_core.py  ทดสอบการนำเข้า SQLite
 scripts/test_server.py       ทดสอบ server.py (ความปลอดภัยของ API) โดยไม่รัน k6 จริง
+scripts/test_make_report.py  ทดสอบรายงานผู้บริหาร (HTML)
 reports/                ผลลัพธ์: results.db (SQLite, ถาวร) + JSON จาก k6 + HTML
 ```
-★ = ค่าเริ่มต้น (Python) · ไฟล์ `*.js` ฝั่งเครื่องมือเป็นเวอร์ชัน Node เดิมที่เก็บไว้
 
 ## เอกสารเพิ่มเติม
 | ไฟล์ | เนื้อหา |
